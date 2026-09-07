@@ -1,9 +1,11 @@
 {
   "version": 2,
   "builds": [
-    { "src": "wishlist/miniapp/index.html", "use": "@vercel/static" }
+    { "src": "wishlist/miniapp/index.html", "use": "@vercel/static" },
+    { "src": "api/index.py", "use": "@vercel/python" }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/(.*)", "dest": "/wishlist/miniapp/index.html" }
   ]
 }
