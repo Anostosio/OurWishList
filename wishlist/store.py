@@ -1,3 +1,4 @@
+import os
 import secrets
 import sqlite3
 import json
@@ -6,6 +7,13 @@ from .catalog import CATEGORIES, MATCH_MODES, KINDS, money
 
 
 class Store:
+    def __new__(cls, path):
+        database_url = os.environ.get('DATABASE_URL', '').strip()
+        if cls is Store and database_url:
+            from .postgres_store import PostgresStore
+            return PostgresStore(database_url)
+        return super().__new__(cls)
+
     def __init__(self, path):
         self.db = sqlite3.connect(path)
         self.db.row_factory = sqlite3.Row
