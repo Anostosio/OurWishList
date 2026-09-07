@@ -18,6 +18,9 @@ class _CompatConnection:
     def execute(self, query, args=()):
         return self._connection.execute(query.replace('?', '%s'), args)
 
+    def close(self):
+        return self._connection.close()
+
     def __enter__(self):
         return self
 
