@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Наш вишлист</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --card: #171a2d;
+      --line: #2b3150;
+      --text: #f3f5ff;
+      --muted: #9ea7d6;
+      --accent: #7c8cff;
+      --accent2: #ffce5c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #1a2040, #0f1220 55%);
+      min-height: 100vh;
+    }
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    header {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(18, 22, 42, 0.8);
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .controls {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .controls select, .controls input, .controls button {
+      border: 1px solid var(--line);
+      background: #121633;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px;
+      width: 100%;
+    }
+    .controls .search {
+      grid-column: 1 / -1;
+    }
+    button {
+      cursor: pointer;
+    }
+    .status { min-height: 22px; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .photo {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #090c19;
+      display: block;
+      object-fit: cover;
+      border-bottom: 1px solid var(--line);
+    }
+    .body { padding: 10px; }
+    .body h2 { margin: 0 0 6px; font-size: 17px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .chip {
+      border: 1px solid var(--line);
+      color: #cdd6ff;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      display: inline-block;
+    }
+    .pager { display: flex; justify-content: space-between; gap: 10px; }
+    .pager button {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: #121633;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px;
+    }
+    .note {
+      margin: 4px 0 0;
+      max-height: 90px;
+      overflow: hidden;
+      position: relative;
+    }
+    .note:after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 24px;
+      background: linear-gradient(transparent, var(--card));
+    }
+    .note.expanded { max-height: none; }
+    .note.expanded:after { display: none; }
+    .actions {
+      display: flex;
+      gap: 6px;
+      padding: 0 10px 10px;
+    }
+    .actions a, .actions button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #1a1f39;
+      color: var(--text);
+      text-decoration: none;
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Наш вишлист</h1>
+      <div class="controls">
+        <select id="kind" title="Список">
+          <option value="mine">💛 Моё</option>
+          <option value="partner">🎁 Партнёра</option>
+          <option value="shared">🏡 Наше</option>
+          <option value="archive">✨ Сбылось</option>
+        </select>
+        <select id="category" title="Категория">
+          <option value="">Все категории</option>
+          <option value="other">📦 Прочее</option>
+          <option value="home">🏠 Для дома</option>
+          <option value="clothes">👕 Одежда</option>
+          <option value="tech">📱 Техника</option>
+          <option value="beauty">💄 Красота</option>
+          <option value="books">📚 Книги</option>
+          <option value="hobby">🎨 Хобби</option>
+          <option value="experience">🎟 Впечатления</option>
+          <option value="travel">✈️ Путешествия</option>
+        </select>
+        <input class="search" id="query" placeholder="Поиск по названию, комментарию, размеру, цвету">
+        <input id="budget" placeholder="Бюджет: 2000 UAH / 50 EUR">
+        <select id="sort" title="Сортировка">
+          <option value="priority">По важности</option>
+          <option value="newest">Сначала новые</option>
+        </select>
+        <button id="apply">Обновить</button>
+      </div>
+      <div class="status" id="status">Загрузка данных…</div>
+    </header>
+    <main class="grid" id="cards"></main>
+    <div class="pager">
+      <button id="prev">← Назад</button>
+      <button id="next">Вперёд →</button>
+    </div>
+  </div>
+  <script>
+    const query = new URLSearchParams(location.search);
+    const session = query.get('session');
+    const apiBase = (query.get('api') || '').replace(/\/$/, '');
+    const state = {page: 0, limit: 12};
+    const nodes = {
+      kind: document.getElementById('kind'),
+      category: document.getElementById('category'),
+      query: document.getElementById('query'),
+      budget: document.getElementById('budget'),
+      sort: document.getElementById('sort'),
+      status: document.getElementById('status'),
+      cards: document.getElementById('cards'),
+      prev: document.getElementById('prev'),
+      next: document.getElementById('next'),
+      apply: document.getElementById('apply')
+    };
+
+    if (!session) {
+      nodes.status.textContent = 'Сначала откройте приложение через кнопку в боте.';
+      nodes.apply.disabled = true;
+      nodes.prev.disabled = true;
+      nodes.next.disabled = true;
+    }
+
+    async function requestWishlist() {
+      if (!session) return;
+      nodes.status.textContent = 'Загружаю список…';
+      const params = new URLSearchParams({
+        session: session,
+        kind: nodes.kind.value,
+        category: nodes.category.value,
+        query: nodes.query.value.trim(),
+        budget: nodes.budget.value.trim(),
+        sort: nodes.sort.value,
+        page: String(state.page),
+        limit: String(state.limit)
+      });
+      const endpointBase = apiBase || `${window.location.origin}/api`;
+      const response = await fetch(endpointBase + '/wishlist?' + params.toString());
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        nodes.status.textContent = data.error || 'Не удалось загрузить список';
+        return;
+      }
+      nodes.status.textContent = `Найдено ${data.count} · Страница ${data.page + 1}`;
+      nodes.cards.innerHTML = '';
+      nodes.prev.disabled = data.page === 0;
+      nodes.next.disabled = !data.hasMore;
+      for (const card of data.cards) {
+        const item = document.createElement('article');
+        item.className = 'card';
+        const image = card.image ? `<img class="photo" src="${card.image.startsWith('tg:') ? '' : card.image}" alt="">` : '';
+        const owner = card.ownerName ? `Автор: ${card.ownerName}` : '';
+        const match = card.matchMode === 'exact' ? 'Именно это' : card.matchMode === 'alternative' ? 'Можно аналог' : '';
+        const shop = card.url ? `<a href="${card.url}" target="_blank">Открыть магазин</a>` : '';
+        item.innerHTML = `
+          ${image || '<div class="photo" style="display:flex;align-items:center;justify-content:center;color:#9ba4c8;font-size:14px;">Нет фото</div>'}
+          <div class="body">
+            <h2>${card.title}</h2>
+            <div class="muted">${owner}</div>
+            <div class="meta">
+              <span class="chip">${card.scope === 'shared' ? 'Для нас' : 'Личное'}</span>
+              <span class="chip">${card.priority === 2 ? '❤️ Очень хочу' : card.priority === 1 ? '💛 Хочу' : '🌱 Когда-нибудь'}</span>
+              ${card.price ? `<span class="chip">${card.price}</span>` : ''}
+              ${card.category ? `<span class="chip">${card.category}</span>` : ''}
+            </div>
+            <div class="muted">${[card.size, card.color].filter(Boolean).join(' · ')}</div>
+            <div class="muted">${match}</div>
+            <p class="note" id="note-${card.id}">${card.note || 'Без комментария'}</p>
+            <button data-id="${card.id}" class="toggle-note">Подробнее</button>
+          </div>
+          <div class="actions">
+            ${shop}
+            <button data-id="${card.id}" class="toggle-archived">${card.archived ? 'В архиве' : 'В списке'}</button>
+          </div>
+        `;
+        nodes.cards.appendChild(item);
+      }
+      if (data.cards.length === 0) {
+        nodes.cards.innerHTML = '<div style="padding:20px;color:#9ea7d6;opacity:.9;">Пока пусто.</div>';
+      }
+      nodes.cards.querySelectorAll('.toggle-note').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const id = Number(button.dataset.id);
+          const response = await fetch(endpointBase + `/wish/${id}?session=${session}`);
+          const detail = await response.json();
+          if (!response.ok || !detail.ok) return;
+          const note = detail.card.note || 'Комментарий не добавлен';
+          button.previousElementSibling.textContent = note;
+          button.previousElementSibling.classList.add('expanded');
+          button.style.display = 'none';
+        });
+      });
+    }
+
+    nodes.prev.addEventListener('click', () => {
+      if (state.page > 0) {
+        state.page -= 1;
+        requestWishlist();
+      }
+    });
+    nodes.next.addEventListener('click', () => {
+      state.page += 1;
+      requestWishlist();
+    });
+    nodes.apply.addEventListener('click', () => {
+      state.page = 0;
+      requestWishlist();
+    });
+
+    requestWishlist();
+  </script>
+</body>
+</html>

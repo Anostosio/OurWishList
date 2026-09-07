@@ -1,0 +1,140 @@
+import json
+import unittest
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+from wishlist.bot import Bot, card
+from wishlist.metadata import clean_url, parse, public_address, fetch
+from wishlist.store import Store
+
+
+class WishlistTests(unittest.TestCase):
+    def setUp(self):
+        self.s = Store(':memory:')
+        for uid in (1, 2, 3):
+            self.s.user(uid, f'User {uid}')
+        self.s.join(2, self.s.invite(1))
+
+    def tearDown(self):
+        self.s.db.close()
+
+    def test_pair_is_limited_to_two_and_invite_is_single_use(self):
+        with self.assertRaises(ValueError):
+            self.s.invite(1)
+        with self.assertRaises(ValueError):
+            self.s.join(3, 'missing')
+        self.assertEqual(self.s.partner(1)['id'], 2)
+
+    def test_private_claim_does_not_change_recipient_card_or_export_fields(self):
+        wid, _ = self.s.add(1, 'Gift')
+        before = card(self.s, 1, self.s.wish(1, wid))
+        self.s.claim(2, wid)
+        self.assertEqual(before, card(self.s, 1, self.s.wish(1, wid)))
+        self.assertIn('Вы планируете', card(self.s, 2, self.s.wish(2, wid))[0])
+        self.s.claim(2, wid)
+        self.assertIsNone(self.s.wish(1, wid)['claimed_by'])
+
+    def test_unauthorized_read_and_edit(self):
+        wid, _ = self.s.add(1, 'Gift')
+        with self.assertRaises(ValueError):
+            self.s.wish(3, wid)
+        with self.assertRaises(ValueError):
+            self.s.change(2, wid, 'title', 'Changed')
+        with self.assertRaises(ValueError):
+            self.s.claim(3, wid)
+
+    def test_lists_archive_and_duplicates(self):
+        wid, fresh = self.s.add(1, 'Gift', url='https://example.com/?size=M')
+        self.assertTrue(fresh)
+        self.assertEqual((wid, False), self.s.add(1, 'Again', url='https://example.com/?size=M'))
+        self.assertTrue(self.s.add(1, 'Other size', url='https://example.com/?size=L')[1])
+        self.s.change(1, wid, 'scope', 'shared')
+        self.assertEqual(self.s.listing(2, 'shared')[0]['id'], wid)
+        self.s.change(1, wid, 'archived', 1)
+        self.assertEqual(len(self.s.listing(2, 'shared')), 0)
+        self.assertEqual(self.s.listing(2, 'archive')[0]['id'], wid)
+
+    def test_failed_fetch_preserves_wish_and_note(self):
+        bot = Bot('unused', self.s)
+        with patch.object(bot, 'api', return_value={}), patch('wishlist.bot.extract', side_effect=ValueError('blocked')):
+            bot.message({'chat': {'id': 1, 'type': 'private'}, 'from': {'id': 1}, 'text': 'https://example.com/item Размер M'})
+        row = self.s.listing(1, 'mine')[0]
+        self.assertEqual(row['url'], 'https://example.com/item')
+        self.assertEqual(row['note'], 'Размер M')
+
+    def test_product_and_og_metadata(self):
+        data = {'@graph': [{'@type': 'Product', 'name': '  Nice   gift ', 'image': ['/image.jpg'], 'offers': {'price': '99', 'priceCurrency': 'UAH'}}]}
+        result = parse('<script type="application/ld+json">' + json.dumps(data) + '</script>', 'https://example.com/item')
+        self.assertEqual(result, {'title': 'Nice gift', 'image': 'https://example.com/image.jpg', 'price': '99 UAH'})
+        self.assertEqual(parse('<meta property="og:title" content="A &amp; B">', 'https://example.com')['title'], 'A & B')
+
+    def test_hostile_metadata_and_html_escape(self):
+        self.assertEqual(parse('<script type="application/ld+json">bad json</script><title>Fallback</title>', 'https://example.com')['title'], 'Fallback')
+        wid, _ = self.s.add(1, '<b>not markup</b>')
+        self.assertIn('&lt;b&gt;', card(self.s, 1, self.s.wish(1, wid))[0])
+
+    def test_internal_network_and_credentials_are_blocked(self):
+        for url in ('file:///etc/passwd', 'http://user:pass@example.com', 'http://example.com:8080'):
+            with self.assertRaises(ValueError):
+                clean_url(url)
+        for addr in ('127.0.0.1', '10.0.0.1', '169.254.169.254', '::1'):
+            with patch('socket.getaddrinfo', return_value=[(2, 1, 6, '', (addr, 0))]):
+                with self.assertRaises(ValueError):
+                    public_address('example.com')
+
+    def test_pagination(self):
+        for number in range(12):
+            self.s.add(1, str(number))
+        self.assertEqual(len(self.s.listing(1, 'mine', 0)), 6)
+        self.assertEqual(len(self.s.listing(1, 'mine', 2)), 2)
+
+    def test_invite_expiry_and_consumption(self):
+        self.s.user(4, 'Fourth')
+        token = self.s.invite(3)
+        self.s.db.execute("UPDATE invites SET created='2020-01-01T00:00:00+00:00' WHERE token=?", (token,))
+        with self.assertRaises(ValueError):
+            self.s.join(4, token)
+        token = self.s.invite(3)
+        self.s.join(4, token)
+        self.assertIsNone(self.s.db.execute('SELECT * FROM invites WHERE token=?', (token,)).fetchone())
+
+    def test_persistence_after_reopen(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'test.sqlite3'
+            first = Store(path)
+            first.user(10, 'Name')
+            wid, _ = first.add(10, 'Keep this')
+            first.db.close()
+            second = Store(path)
+            self.assertEqual(second.wish(10, wid)['title'], 'Keep this')
+            second.db.close()
+
+    def test_redirect_to_internal_address_is_blocked(self):
+        with patch('wishlist.metadata.public_address', side_effect=['93.184.216.34', ValueError('private')]), \
+             patch('wishlist.metadata.socket.create_connection'), \
+             patch('wishlist.metadata.http.client.HTTPConnection') as connection:
+            response = connection.return_value.getresponse.return_value
+            response.status = 302
+            response.getheader.return_value = 'http://127.0.0.1/secrets'
+            with self.assertRaises(ValueError):
+                fetch('http://example.com/item')
+            self.assertEqual(connection.call_count, 1)
+
+    def test_bot_edit_flow_and_export_do_not_leak_claim(self):
+        wid, _ = self.s.add(1, 'Original')
+        self.s.claim(2, wid)
+        bot = Bot('unused', self.s)
+        with patch.object(bot, 'api', return_value={}) as api:
+            bot.callback({'id': 'q1', 'from': {'id': 1}, 'message': {'chat': {'type': 'private'}}, 'data': f'edit:note:{wid}'})
+            bot.message({'chat': {'id': 1, 'type': 'private'}, 'from': {'id': 1}, 'text': 'Размер M, зелёный'})
+            self.assertEqual(self.s.wish(1, wid)['note'], 'Размер M, зелёный')
+            api.reset_mock()
+            bot.message({'chat': {'id': 1, 'type': 'private'}, 'from': {'id': 1}, 'text': '/export'})
+            output = str(api.call_args_list)
+            self.assertNotIn('claimed_by', output)
+            self.assertNotIn('Вы планируете', output)
+
+
+if __name__ == '__main__':
+    unittest.main()
