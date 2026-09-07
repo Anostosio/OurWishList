@@ -4,126 +4,427 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OurWishList</title>
-  <style>
-    :root {
-      --bg: #0f1220;
-      --card: #171a2d;
-      --line: #2b3150;
-      --text: #f3f5ff;
-      --muted: #9ea7d6;
-      --accent: #7c8cff;
-      --accent2: #ffce5c;
+<style>
+    :root,
+    [data-theme="light"] {
+      --bg: #f4f9ec;
+      --surface: #ffffff;
+      --surface-soft: #f8fbf1;
+      --line: #d8e5be;
+      --text: #1a241a;
+      --muted: #5f6d54;
+      --muted-soft: #7b896e;
+      --accent: #91c65f;
+      --accent-strong: #7ab34d;
+      --accent-soft: rgba(145, 198, 95, 0.18);
+      --danger: #e96a7f;
+      --shadow: 0 16px 40px rgba(67, 91, 38, 0.12);
+      --shadow-soft: 0 10px 24px rgba(67, 91, 38, 0.12);
+      --ring: rgba(145, 198, 95, 0.25);
+      --page-max: 1020px;
     }
+
+    [data-theme="dark"] {
+      --bg: #151c1a;
+      --surface: #1c2523;
+      --surface-soft: #1f2927;
+      --line: #2d3a35;
+      --text: #eaf4ea;
+      --muted: #9fb2a6;
+      --muted-soft: #82958a;
+      --accent: #8fcd70;
+      --accent-strong: #73b85a;
+      --accent-soft: rgba(143, 205, 112, 0.2);
+      --danger: #f08b9d;
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.2);
+      --ring: rgba(143, 205, 112, 0.25);
+    }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Inter, Arial, sans-serif;
       color: var(--text);
-      background: radial-gradient(circle at top, #1a2040, #0f1220 55%);
+      background: radial-gradient(circle at top, #d8e7b8, var(--bg) 55%);
       min-height: 100vh;
+      overflow-x: hidden;
     }
+
     .page {
-      max-width: 980px;
+      max-width: var(--page-max);
       margin: 0 auto;
       padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      display: grid;
+      gap: 14px;
     }
+
     header {
-      padding: 12px;
+      position: sticky;
+      top: 8px;
+      z-index: 2;
+      padding: 14px;
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(18, 22, 42, 0.8);
+      border-radius: 18px;
+      background: color-mix(in oklab, var(--surface) 76%, transparent);
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow-soft);
     }
-    .logo {
-      margin: 0 0 14px;
-      display: inline-block;
-      font-size: clamp(28px, 6vw, 42px);
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -1.6px;
-      background: linear-gradient(110deg, #ffffff 5%, #cbd3ff 38%, #8f9cff 62%, #ffcf67 100%);
+
+    .brand {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.2px;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--muted-soft);
+    }
+
+    .kind-badge {
+      margin-left: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted-soft);
+      background: var(--surface-soft);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .brand-logo {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.05;
+      letter-spacing: 0.4px;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .brand-logo .word {
+      background: linear-gradient(90deg, #6cb44d 0%, #8fd56c 50%, #5cb5ff 100%);
       -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       background-clip: text;
       color: transparent;
-      text-shadow: 0 8px 30px rgba(124, 140, 255, 0.18);
     }
-    .logo .wish {
-      font-weight: 950;
+
+    .brand-logo .mark {
+      font-size: 23px;
+      filter: drop-shadow(0 1px 2px rgba(100, 150, 80, 0.25));
+      padding-right: 4px;
     }
-    .controls {
+
+    .status-wrap {
+      margin-bottom: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: var(--muted);
+      background: var(--accent-soft);
+      font-size: 13px;
+    }
+
+    .filter-menu {
+      margin: 10px 0 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+    }
+
+    .filter-menu > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 12px;
+      border-bottom: 1px solid transparent;
+      color: var(--muted-soft);
+      font-weight: 600;
+      background: var(--surface-soft);
+      user-select: none;
+    }
+
+    .filter-menu > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .filter-menu > summary::after {
+      content: "▼";
+      float: right;
+      transition: transform 0.2s ease;
+      color: var(--muted-soft);
+      font-size: 12px;
+    }
+
+    .filter-menu[open] > summary::after {
+      transform: rotate(180deg);
+    }
+
+    .filter-menu[open] > summary {
+      border-bottom-color: var(--line);
+    }
+
+    .filter-menu-body {
+      padding: 10px 12px;
       display: grid;
       gap: 10px;
+    }
+
+    .controls,
+    .action-row {
+      display: grid;
+      gap: 10px;
+    }
+
+    .controls {
       grid-template-columns: 1fr 1fr;
     }
-    .controls select, .controls input, .controls button {
+
+    .controls select,
+    .controls input,
+    .actions button,
+    .pager button,
+    .top-actions button {
+      appearance: none;
       border: 1px solid var(--line);
-      background: #121633;
+      background: var(--surface);
       color: var(--text);
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 10px;
       width: 100%;
+      font: inherit;
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     }
+
+    .controls select:focus,
+    .controls input:focus,
+    .top-actions button:focus,
+    .pager button:focus,
+    .actions a:focus,
+    .actions button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--ring);
+      border-color: var(--accent);
+    }
+
     .controls .search {
       grid-column: 1 / -1;
     }
-    button {
-      cursor: pointer;
+
+    .action-row {
+      grid-template-columns: 1fr 1fr;
+      margin-top: 8px;
     }
-    .status { min-height: 22px; color: var(--muted); }
+
+    .menu-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .menu-actions button {
+      flex: 1;
+      min-width: 160px;
+    }
+
+    button { cursor: pointer; }
+
+    .status {
+      min-height: 22px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status .dot {
+      width: 9px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      animation: pulse 1s infinite;
+      opacity: 0.9;
+      flex: 0 0 auto;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: .7; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 12px;
     }
+
     @media (max-width: 700px) {
       .grid { grid-template-columns: 1fr; }
     }
+
     .card {
       border: 1px solid var(--line);
-      background: var(--card);
-      border-radius: 14px;
+      background: var(--surface);
+      border-radius: 16px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       gap: 8px;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      box-shadow: var(--shadow-soft);
+      padding: 0;
     }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: var(--shadow);
+    }
+
+    .mediaWrap {
+      position: relative;
+      background: linear-gradient(135deg, #ddecc0, #f6ffef);
+      aspect-ratio: 4 / 3;
+    }
+
     .photo {
       width: 100%;
-      aspect-ratio: 4 / 3;
-      background: #090c19;
+      height: 100%;
       display: block;
       object-fit: cover;
       border-bottom: 1px solid var(--line);
     }
-    .body { padding: 10px; }
-    .body h2 { margin: 0 0 6px; font-size: 17px; }
-    .muted { color: var(--muted); font-size: 13px; }
-    .meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-    .chip {
-      border: 1px solid var(--line);
-      color: #cdd6ff;
+
+    .photo-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #7a8b66;
+      font-size: 14px;
+      background: linear-gradient(135deg, #ecf4d5, #daeab2);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .scopeBadge {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      padding: 5px 8px;
       border-radius: 999px;
-      padding: 4px 8px;
-      font-size: 12px;
-      display: inline-block;
-    }
-    .pager { display: flex; justify-content: space-between; gap: 10px; }
-    .pager button {
-      flex: 1;
+      background: color-mix(in oklab, var(--surface) 80%, transparent);
       border: 1px solid var(--line);
-      background: #121633;
-      color: var(--text);
-      border-radius: 10px;
-      padding: 8px;
+      font-size: 12px;
+      backdrop-filter: blur(2px);
     }
+
+    .priceStamp {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      border-radius: 10px;
+      padding: 5px 9px;
+      background: linear-gradient(90deg, rgba(145, 198, 95, .24), rgba(145, 198, 95, .08));
+      border: 1px solid rgba(145, 198, 95, .45);
+      color: #6f8f44;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .body { padding: 11px; }
+
+    .body h2 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      line-height: 1.2;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0;
+      min-height: 27px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .details {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 8px;
+      border-left: 2px solid var(--line);
+      padding-left: 8px;
+    }
+
+    .details div {
+      font-size: 13px;
+      color: var(--muted-soft);
+    }
+
+    .details strong {
+      color: var(--text);
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
     .note {
       margin: 4px 0 0;
-      max-height: 90px;
+      max-height: 66px;
       overflow: hidden;
       position: relative;
+      padding-bottom: 2px;
+      transition: max-height .2s ease;
+      white-space: pre-wrap;
     }
+
     .note:after {
       content: '';
       position: absolute;
@@ -131,70 +432,300 @@
       right: 0;
       bottom: 0;
       height: 24px;
-      background: linear-gradient(transparent, var(--card));
+      background: linear-gradient(transparent, var(--surface));
+      pointer-events: none;
     }
+
     .note.expanded { max-height: none; }
     .note.expanded:after { display: none; }
+
     .actions {
       display: flex;
       gap: 6px;
       padding: 0 10px 10px;
+      flex-wrap: wrap;
     }
-    .actions a, .actions button {
+
+    .actions a,
+    .actions button {
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #1a1f39;
+      background: var(--surface-soft);
       color: var(--text);
       text-decoration: none;
       padding: 6px 8px;
       font-size: 12px;
     }
+
+    .actions button.secondary {
+      background: #ffffffb3;
+      border-color: var(--line);
+      color: #5f6d54;
+      white-space: nowrap;
+    }
+
+    .actions .stateBadge {
+      margin-left: auto;
+      color: #5f6d54;
+      font-size: 12px;
+      border-color: var(--line);
+      background: var(--surface-soft);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .pager {
+      position: sticky;
+      bottom: 6px;
+      background: transparent;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .pager button {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px;
+      font-weight: 500;
+      min-height: 40px;
+    }
+
+    .pager button[disabled] {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      padding: 28px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--muted);
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.4;
+      grid-column: 1 / -1;
+    }
+
+    .empty-state strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .toolbar-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted-soft);
+    }
+
+    .skeleton {
+      border-radius: 14px;
+      border: 1px dashed var(--line);
+      min-height: 210px;
+      background: linear-gradient(90deg, rgba(145, 198, 95, 0.08) 25%, rgba(145, 198, 95, 0.22) 37%, rgba(145, 198, 95, 0.08) 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease infinite;
+      padding: 12px;
+      grid-column: 1 / -1;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      color: var(--muted-soft);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      display: inline-block;
+    }
+
+    .chip.priority-high {
+      border-color: #d97f8c;
+      color: #d97f8c;
+      background: rgba(217, 127, 140, .12);
+    }
+
+    .chip.priority-mid {
+      border-color: #d9b34f;
+      color: #a07d25;
+      background: rgba(217, 179, 79, .15);
+    }
+
+    .chip.priority-low {
+      border-color: #8be8a8;
+      color: #2f7d45;
+      background: rgba(139, 232, 168, .14);
+    }
+
+    .primary {
+      border-color: var(--accent-strong) !important;
+      background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 90%, white), color-mix(in oklab, var(--accent-strong) 86%, white));
+      color: white !important;
+      font-weight: 600;
+    }
+
+    .outline { background: var(--surface); }
+    .small {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .theme-chip {
+      width: auto;
+      min-width: 40px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 14px;
+      white-space: nowrap;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .layout-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .hint-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+      color: var(--muted-soft);
+      font-size: 12px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      border: 0;
+    }
+
   </style>
 </head>
 <body>
   <div class="page">
     <header>
-      <h1 class="logo">Our<span class="wish">Wish</span>List</h1>
-      <div class="controls">
-        <select id="kind" title="Список">
-          <option value="mine">💛 Моё</option>
-          <option value="partner">🎁 Партнёра</option>
-          <option value="shared">🏡 Наше</option>
-          <option value="archive">✨ Сбылось</option>
-        </select>
-        <select id="category" title="Категория">
-          <option value="">Все категории</option>
-          <option value="other">📦 Прочее</option>
-          <option value="home">🏠 Для дома</option>
-          <option value="clothes">👕 Одежда</option>
-          <option value="tech">📱 Техника</option>
-          <option value="beauty">💄 Красота</option>
-          <option value="books">📚 Книги</option>
-          <option value="hobby">🎨 Хобби</option>
-          <option value="experience">🎟 Впечатления</option>
-          <option value="travel">✈️ Путешествия</option>
-        </select>
-        <input class="search" id="query" placeholder="Поиск по названию, комментарию, размеру, цвету">
-        <input id="budget" placeholder="Бюджет: 2000 UAH / 50 EUR">
-        <select id="sort" title="Сортировка">
-          <option value="priority">По важности</option>
-          <option value="newest">Сначала новые</option>
-        </select>
-        <button id="apply">Обновить</button>
+      <div class="brand">
+        <div>
+          <h1 class="brand-logo" aria-label="OurWishList">
+            <span class="mark">🎁</span><span>Our</span><span class="word">Wish</span><span class="word">List</span>
+          </h1>
+          <p>Мягкий и удобный режим просмотра желаний</p>
+        </div>
+        <div class="top-actions">
+          <button id="themeChip" class="theme-chip" type="button" aria-label="Переключить тему">☀️ Светлая</button>
+          <button id="addWish" class="primary small" type="button" aria-label="Добавить хотелку">＋ Добавить</button>
+        </div>
       </div>
-      <div class="status" id="status">Загрузка данных…</div>
+      <div class="hint-row">
+        <span class="pill" id="kindLabel">Моё</span>
+        <span id="resultHint">Галерея желаний</span>
+      </div>
+
+      <div class="status-wrap">
+        <div class="status" id="status">
+          <span class="dot" id="loaderDot" style="display:none;"></span>
+          <span>Готовимся к загрузке…</span>
+        </div>
+      </div>
+
+      <details id="filterMenu" class="filter-menu">
+        <summary>🎛 Меню и фильтры</summary>
+        <div class="filter-menu-body">
+          <div class="controls">
+            <select id="kind" title="Список">
+              <option value="mine">💛 Моё</option>
+              <option value="partner">🎁 Партнёра</option>
+              <option value="shared">🏡 Наше</option>
+              <option value="archive">✨ Сбылось</option>
+            </select>
+            <select id="category" title="Категория">
+              <option value="">Все категории</option>
+              <option value="other">📦 Прочее</option>
+              <option value="home">🏠 Для дома</option>
+              <option value="clothes">👕 Одежда</option>
+              <option value="tech">📱 Техника</option>
+              <option value="beauty">💄 Красота</option>
+              <option value="books">📚 Книги</option>
+              <option value="hobby">🎨 Хобби</option>
+              <option value="experience">🎟 Впечатления</option>
+              <option value="travel">✈️ Путешествия</option>
+            </select>
+            <input class="search" id="query" placeholder="Поиск: название, комментарий, размер, цвет">
+            <input id="budget" placeholder="Бюджет (например: 2000 UAH)">
+            <select id="sort" title="Сортировка">
+              <option value="priority">По важности</option>
+              <option value="newest">Сначала новые</option>
+            </select>
+          </div>
+          <div class="action-row">
+            <button id="clear" class="outline small">Сбросить</button>
+            <button id="apply" class="primary small">Применить</button>
+          </div>
+        </div>
+      </details>
+      <div class="menu-actions">
+        <span class="pill">Скрытое меню: быстрый доступ к фильтрам и спискам</span>
+      </div>
+      <div class="toolbar-footer">
+        <span id="resultCountHint">Загрузка списка…</span>
+        <span class="pill">Откройте меню для фильтрации</span>
+      </div>
     </header>
+
     <main class="grid" id="cards"></main>
+
     <div class="pager">
-      <button id="prev">← Назад</button>
-      <button id="next">Вперёд →</button>
+      <button id="prev" class="small">← Назад</button>
+      <button id="next" class="small">Вперёд →</button>
     </div>
   </div>
+
   <script>
     const query = new URLSearchParams(location.search);
     const session = query.get('session');
     const apiBase = (query.get('api') || '').replace(/\/$/, '');
-    const state = {page: 0, limit: 12};
+    const botLink = query.get('bot') || '';
+
+    const kindNames = {
+      mine: '💛 Моё',
+      partner: '🎁 Партнёра',
+      shared: '🏡 Наше',
+      archive: '✨ Сбылось'
+    };
+
+    const state = {
+      page: 0,
+      limit: 12
+    };
+
     const nodes = {
       kind: document.getElementById('kind'),
       category: document.getElementById('category'),
@@ -203,23 +734,315 @@
       sort: document.getElementById('sort'),
       status: document.getElementById('status'),
       cards: document.getElementById('cards'),
+      resultHint: document.getElementById('resultHint'),
+      resultCountHint: document.getElementById('resultCountHint'),
       prev: document.getElementById('prev'),
       next: document.getElementById('next'),
-      apply: document.getElementById('apply')
+      apply: document.getElementById('apply'),
+      clear: document.getElementById('clear'),
+      kindLabel: document.getElementById('kindLabel'),
+      loaderDot: document.getElementById('loaderDot'),
+      addWish: document.getElementById('addWish'),
+      filterMenu: document.getElementById('filterMenu'),
+      themeChip: document.getElementById('themeChip')
     };
 
+    function setSessionReady(enabled) {
+      nodes.apply.disabled = !enabled;
+      nodes.addWish.disabled = !enabled;
+      nodes.prev.disabled = !enabled;
+      nodes.next.disabled = !enabled;
+      nodes.clear.disabled = !enabled;
+      nodes.kind.disabled = !enabled;
+      nodes.category.disabled = !enabled;
+      nodes.query.disabled = !enabled;
+      nodes.budget.disabled = !enabled;
+      nodes.sort.disabled = !enabled;
+    }
+
     if (!session) {
-      nodes.status.textContent = 'Сначала откройте приложение через кнопку в боте.';
-      nodes.apply.disabled = true;
-      nodes.prev.disabled = true;
-      nodes.next.disabled = true;
+      nodes.status.querySelector('span:last-child').textContent = 'Сначала откройте приложение через кнопку в боте.';
+      setSessionReady(false);
+    }
+
+    function setLoading(isLoading) {
+      nodes.loaderDot.style.display = isLoading ? 'inline-block' : 'none';
+      nodes.apply.disabled = isLoading || !session;
+      nodes.addWish.disabled = isLoading || !session;
+      nodes.prev.disabled = isLoading || !session;
+      nodes.next.disabled = isLoading || !session;
+      nodes.clear.disabled = isLoading || !session;
+      nodes.kind.disabled = isLoading || !session;
+      nodes.category.disabled = isLoading || !session;
+      nodes.query.disabled = isLoading || !session;
+      nodes.budget.disabled = isLoading || !session;
+      nodes.sort.disabled = isLoading || !session;
+      if (isLoading && nodes.status.querySelector('span:last-child')) {
+        nodes.status.querySelector('span:last-child').textContent = 'Загрузка пожеланий…';
+      }
+    }
+
+    function setStatus(text) {
+      nodes.status.querySelector('span:last-child').textContent = text;
+    }
+
+    function setTheme(theme) {
+      const mode = theme === 'dark' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', mode);
+      nodes.themeChip.textContent = mode === 'dark' ? '🌙 Тёмная' : '☀️ Светлая';
+      tryStorageSet('wishlist_theme', mode);
+      return mode;
+    }
+
+    function tryStorageGet(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    function tryStorageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {
+        // storage is optional in some webviews
+      }
+    }
+
+    function getPreferredTheme() {
+      const saved = tryStorageGet('wishlist_theme');
+      if (saved === 'light' || saved === 'dark') {
+        return saved;
+      }
+      const tg = window.Telegram?.WebApp;
+      const scheme = tg?.colorScheme;
+      if (scheme === 'dark') {
+        return 'dark';
+      }
+      return 'light';
+    }
+
+    function isBright(colorValue) {
+      if (!colorValue) return true;
+      const hex = colorValue.trim();
+      if (/^#(?:[0-9a-f]{3}){1,2}$/i.test(hex)) {
+        const value = hex.replace('#', '');
+        const normalized = value.length === 3
+          ? value.split('').map((c) => c + c).join('')
+          : value;
+        const red = parseInt(normalized.slice(0, 2), 16);
+        const green = parseInt(normalized.slice(2, 4), 16);
+        const blue = parseInt(normalized.slice(4, 6), 16);
+        const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+        return luminance > 160;
+      }
+      return true;
+    }
+
+    const telegramTheme = window.Telegram?.WebApp?.themeParams || {};
+    const hasBrightTheme = isBright(telegramTheme.bg_color);
+    if (telegramTheme.bg_color && !tryStorageGet('wishlist_theme')) {
+      const tgTheme = hasBrightTheme ? 'light' : 'dark';
+      setTheme(tgTheme);
+    } else {
+      setTheme(getPreferredTheme());
+    }
+
+    nodes.themeChip.addEventListener('click', () => {
+      const nextTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(nextTheme);
+    });
+
+    function showPlaceholder() {
+      nodes.cards.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const row = document.createElement('article');
+        row.className = 'skeleton';
+        nodes.cards.appendChild(row);
+      }
+    }
+
+    function createEmptyState() {
+      const wrap = document.createElement('div');
+      wrap.className = 'empty-state';
+      wrap.innerHTML = `
+        <strong>Пока ничего не найдено</strong>
+        Попробуйте убрать часть фильтра или сменить список.
+      `;
+      return wrap;
+    }
+
+    function chipClassForPriority(priority) {
+      return priority === 2 ? 'priority-high' : priority === 1 ? 'priority-mid' : 'priority-low';
+    }
+
+    function scopeName(scope, isOwner) {
+      if (scope === 'shared') return 'Для нас';
+      return isOwner ? 'Моё' : 'Личное';
+    }
+
+    function matchModeText(matchMode) {
+      return matchMode === 'exact' ? 'Именно это' : matchMode === 'alternative' ? 'Можно аналог' : 'Вариант не уточнён';
+    }
+
+    function renderCard(card) {
+      const item = document.createElement('article');
+      item.className = 'card';
+
+      const media = document.createElement('div');
+      media.className = 'mediaWrap';
+      const hasImage = Boolean(card.image && !card.image.startsWith('tg:'));
+      if (hasImage) {
+        const image = document.createElement('img');
+        image.className = 'photo';
+        image.loading = 'lazy';
+        image.src = card.image;
+        image.alt = card.title || 'Изображение карточки';
+        media.appendChild(image);
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'photo-placeholder';
+        empty.textContent = 'Нет фото';
+        media.appendChild(empty);
+      }
+
+      const scopeBadge = document.createElement('span');
+      scopeBadge.className = 'scopeBadge';
+      scopeBadge.textContent = scopeName(card.scope, !!card.isOwner);
+      media.appendChild(scopeBadge);
+
+      if (card.price) {
+        const price = document.createElement('span');
+        price.className = 'priceStamp';
+        price.textContent = card.price;
+        media.appendChild(price);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'body';
+
+      const title = document.createElement('h2');
+      title.textContent = card.title || 'Без названия';
+      const owner = document.createElement('p');
+      owner.className = 'muted';
+      owner.textContent = card.ownerName ? `Автор: ${card.ownerName}` : '';
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const scopeChip = document.createElement('span');
+      scopeChip.className = 'chip';
+      scopeChip.textContent = card.scope === 'shared' ? 'Для нас' : 'Личное';
+      const priorityChip = document.createElement('span');
+      priorityChip.className = `chip ${chipClassForPriority(card.priority)}`;
+      priorityChip.textContent = card.priority === 2 ? '❤️ Очень хочу' : card.priority === 1 ? '💛 Хочу' : '🌱 Когда-нибудь';
+      meta.append(scopeChip, priorityChip);
+      if (card.price) {
+        const priceChip = document.createElement('span');
+        priceChip.className = 'chip';
+        priceChip.textContent = card.price;
+        meta.appendChild(priceChip);
+      }
+      if (card.category) {
+        const categoryChip = document.createElement('span');
+        categoryChip.className = 'chip';
+        categoryChip.textContent = card.category;
+        meta.appendChild(categoryChip);
+      }
+
+      const details = document.createElement('div');
+      details.className = 'details';
+      const specs = [card.size, card.color].filter(Boolean).join(' · ');
+      const specsLine = document.createElement('div');
+      const pref = document.createElement('strong');
+      pref.textContent = 'Характеристики:';
+      specsLine.appendChild(pref);
+      specsLine.append(document.createTextNode(' ' + (specs || 'не указаны')));
+      const matchLine = document.createElement('div');
+      const mPref = document.createElement('strong');
+      mPref.textContent = 'Подойдёт:';
+      matchLine.appendChild(mPref);
+      matchLine.append(document.createTextNode(' ' + matchModeText(card.matchMode || 'unspecified')));
+      details.append(specsLine, matchLine);
+
+      const note = document.createElement('p');
+      note.className = 'note';
+      note.textContent = card.note || 'Комментарий не добавлен';
+      note.id = `note-${card.id}`;
+
+      const toggle = document.createElement('button');
+      toggle.className = 'secondary small';
+      toggle.classList.add('secondary');
+      toggle.classList.add('small');
+      toggle.dataset.id = String(card.id);
+      toggle.textContent = 'Подробнее';
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      if (card.url) {
+        const storeLink = document.createElement('a');
+        storeLink.href = card.url;
+        storeLink.target = '_blank';
+        storeLink.rel = 'noopener noreferrer';
+        storeLink.textContent = 'Открыть магазин';
+        actions.appendChild(storeLink);
+      }
+      const stateBadge = document.createElement('button');
+      stateBadge.className = 'stateBadge';
+      stateBadge.type = 'button';
+      stateBadge.textContent = card.archived ? 'В архиве' : 'В списке';
+      actions.appendChild(stateBadge);
+
+      body.append(title, owner, meta, details, note, toggle);
+      item.append(media, body, actions);
+      return {item, note, toggle};
+    }
+
+    async function loadCardDetail(id, noteNode, toggleButton) {
+      const endpointBase = apiBase || `${window.location.origin}/api`;
+      try {
+        const response = await fetch(`${endpointBase}/wish/${id}?session=${encodeURIComponent(session)}`);
+        const detail = await response.json();
+        if (!response.ok || !detail.ok) return;
+        noteNode.textContent = detail.card.note || 'Комментарий не добавлен';
+        noteNode.classList.add('expanded');
+        toggleButton.style.display = 'none';
+      } catch {
+        noteNode.textContent = noteNode.textContent || 'Комментарий не добавлен';
+      }
+    }
+
+    function renderCards(data) {
+      nodes.cards.innerHTML = '';
+      nodes.prev.disabled = data.page === 0;
+      nodes.next.disabled = !data.hasMore;
+
+      if (!data.cards.length) {
+        nodes.cards.appendChild(createEmptyState());
+        nodes.resultHint.textContent = `Список пуст — попробуйте другие фильтры`;
+        nodes.resultCountHint.textContent = 'Подарков не найдено';
+        return;
+      }
+
+      for (const card of data.cards) {
+        const {item, note, toggle} = renderCard(card);
+        nodes.cards.appendChild(item);
+        toggle.addEventListener('click', () => loadCardDetail(card.id, note, toggle));
+      }
+      nodes.resultHint.textContent = `Найдено: ${data.count}`;
+      nodes.resultCountHint.textContent = `Найдено подарков: ${data.count} · Страница ${data.page + 1}`;
     }
 
     async function requestWishlist() {
       if (!session) return;
-      nodes.status.textContent = 'Загружаю список…';
+      setLoading(true);
+      setStatus('Загружаю список…');
+      nodes.kindLabel.textContent = kindNames[nodes.kind.value] || 'Список';
+
+      showPlaceholder();
+
       const params = new URLSearchParams({
-        session: session,
+        session,
         kind: nodes.kind.value,
         category: nodes.category.value,
         query: nodes.query.value.trim(),
@@ -229,62 +1052,58 @@
         limit: String(state.limit)
       });
       const endpointBase = apiBase || `${window.location.origin}/api`;
-      const response = await fetch(endpointBase + '/wishlist?' + params.toString());
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        nodes.status.textContent = data.error || 'Не удалось загрузить список';
-        return;
+      try {
+        const response = await fetch(`${endpointBase}/wishlist?${params.toString()}`);
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          setStatus(data.error || 'Не удалось загрузить список');
+          nodes.resultHint.textContent = '';
+          nodes.resultCountHint.textContent = 'Нет результатов';
+          nodes.cards.innerHTML = '';
+          nodes.cards.appendChild(createEmptyState());
+          return;
+        }
+        setStatus(`Страница ${data.page + 1}`);
+        renderCards(data);
+      } catch {
+        setStatus('Нет доступа к API. Проверьте локальный мини-сервер и WEBAPP_API_BASE.');
+        nodes.resultCountHint.textContent = 'Ошибка загрузки';
+        nodes.cards.innerHTML = '';
+        nodes.cards.appendChild(createEmptyState());
+      } finally {
+        setLoading(false);
       }
-      nodes.status.textContent = `Найдено ${data.count} · Страница ${data.page + 1}`;
-      nodes.cards.innerHTML = '';
-      nodes.prev.disabled = data.page === 0;
-      nodes.next.disabled = !data.hasMore;
-      for (const card of data.cards) {
-        const item = document.createElement('article');
-        item.className = 'card';
-        const image = card.image ? `<img class="photo" src="${card.image.startsWith('tg:') ? '' : card.image}" alt="">` : '';
-        const owner = card.ownerName ? `Автор: ${card.ownerName}` : '';
-        const match = card.matchMode === 'exact' ? 'Именно это' : card.matchMode === 'alternative' ? 'Можно аналог' : '';
-        const shop = card.url ? `<a href="${card.url}" target="_blank">Открыть магазин</a>` : '';
-        item.innerHTML = `
-          ${image || '<div class="photo" style="display:flex;align-items:center;justify-content:center;color:#9ba4c8;font-size:14px;">Нет фото</div>'}
-          <div class="body">
-            <h2>${card.title}</h2>
-            <div class="muted">${owner}</div>
-            <div class="meta">
-              <span class="chip">${card.scope === 'shared' ? 'Для нас' : 'Личное'}</span>
-              <span class="chip">${card.priority === 2 ? '❤️ Очень хочу' : card.priority === 1 ? '💛 Хочу' : '🌱 Когда-нибудь'}</span>
-              ${card.price ? `<span class="chip">${card.price}</span>` : ''}
-              ${card.category ? `<span class="chip">${card.category}</span>` : ''}
-            </div>
-            <div class="muted">${[card.size, card.color].filter(Boolean).join(' · ')}</div>
-            <div class="muted">${match}</div>
-            <p class="note" id="note-${card.id}">${card.note || 'Без комментария'}</p>
-            <button data-id="${card.id}" class="toggle-note">Подробнее</button>
-          </div>
-          <div class="actions">
-            ${shop}
-            <button data-id="${card.id}" class="toggle-archived">${card.archived ? 'В архиве' : 'В списке'}</button>
-          </div>
-        `;
-        nodes.cards.appendChild(item);
-      }
-      if (data.cards.length === 0) {
-        nodes.cards.innerHTML = '<div style="padding:20px;color:#9ea7d6;opacity:.9;">Пока пусто.</div>';
-      }
-      nodes.cards.querySelectorAll('.toggle-note').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const id = Number(button.dataset.id);
-          const response = await fetch(endpointBase + `/wish/${id}?session=${session}`);
-          const detail = await response.json();
-          if (!response.ok || !detail.ok) return;
-          const note = detail.card.note || 'Комментарий не добавлен';
-          button.previousElementSibling.textContent = note;
-          button.previousElementSibling.classList.add('expanded');
-          button.style.display = 'none';
-        });
-      });
     }
+
+    function resetFilters() {
+      nodes.category.value = '';
+      nodes.query.value = '';
+      nodes.budget.value = '';
+      nodes.sort.value = 'priority';
+      state.page = 0;
+      requestWishlist();
+    }
+
+    function closeFilterMenu() {
+      if (nodes.filterMenu) {
+        nodes.filterMenu.open = false;
+      }
+    }
+
+    function openAddWish() {
+      if (botLink && window.Telegram?.WebApp?.openTelegramLink) {
+        return window.Telegram.WebApp.openTelegramLink(botLink);
+      }
+      if (botLink) {
+        return window.location.href = botLink;
+      }
+      nodes.status.querySelector('span:last-child').textContent = 'Откройте бота и отправьте ссылку или текст.';
+      return window.alert('Откройте бота и отправьте ссылку или текст для добавления новой хотелки.');
+    }
+
+    nodes.addWish.addEventListener('click', () => {
+      openAddWish();
+    });
 
     nodes.prev.addEventListener('click', () => {
       if (state.page > 0) {
@@ -292,16 +1111,48 @@
         requestWishlist();
       }
     });
+
     nodes.next.addEventListener('click', () => {
       state.page += 1;
       requestWishlist();
     });
+
     nodes.apply.addEventListener('click', () => {
       state.page = 0;
+      closeFilterMenu();
       requestWishlist();
     });
 
-    requestWishlist();
+    nodes.clear.addEventListener('click', () => {
+      resetFilters();
+      closeFilterMenu();
+    });
+
+    nodes.query.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        state.page = 0;
+        closeFilterMenu();
+        requestWishlist();
+      }
+    });
+
+    nodes.kind.addEventListener('change', () => {
+      state.page = 0;
+      closeFilterMenu();
+      requestWishlist();
+    });
+
+    try {
+      const tg = window.Telegram?.WebApp;
+      if (typeof tg?.ready === 'function') tg.ready();
+      if (typeof tg?.expand === 'function') tg.expand();
+    } catch {
+      // Telegram Web App SDK can be unavailable.
+    }
+
+    if (session) {
+      requestWishlist();
+    }
   </script>
 </body>
 </html>

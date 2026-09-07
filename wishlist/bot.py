@@ -198,6 +198,8 @@ class Bot:
         token = self.store.create_webapp_session(uid)
         sep = '&' if '?' in self.webapp_url else '?'
         app_url = self.webapp_url + sep + 'session=' + quote(token)
+        if self.username:
+            app_url += '&bot=' + quote(f'https://t.me/{self.username}')
         api_base = os.environ.get('WEBAPP_API_BASE', '').strip()
         if api_base:
             app_url += '&api=' + quote(api_base.rstrip('/'))
