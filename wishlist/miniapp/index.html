@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Наш вишлист</title>
+  <title>OurWishList</title>
   <style>
     :root {
       --bg: #0f1220;
@@ -36,7 +36,22 @@
       border-radius: 14px;
       background: rgba(18, 22, 42, 0.8);
     }
-    h1 { margin: 0 0 8px; font-size: 22px; }
+    .logo {
+      margin: 0 0 14px;
+      display: inline-block;
+      font-size: clamp(28px, 6vw, 42px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -1.6px;
+      background: linear-gradient(110deg, #ffffff 5%, #cbd3ff 38%, #8f9cff 62%, #ffcf67 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 8px 30px rgba(124, 140, 255, 0.18);
+    }
+    .logo .wish {
+      font-weight: 950;
+    }
     .controls {
       display: grid;
       gap: 10px;
@@ -139,7 +154,7 @@
 <body>
   <div class="page">
     <header>
-      <h1>Наш вишлист</h1>
+      <h1 class="logo">Our<span class="wish">Wish</span>List</h1>
       <div class="controls">
         <select id="kind" title="Список">
           <option value="mine">💛 Моё</option>
