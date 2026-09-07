@@ -8,9 +8,27 @@ from psycopg.rows import dict_row
 from .catalog import CATEGORIES, MATCH_MODES, KINDS, money
 
 
+class _CompatConnection:
+    def __init__(self, connection):
+        self._connection = connection
+
+    def cursor(self):
+        return self._connection.cursor()
+
+    def execute(self, query, args=()):
+        return self._connection.execute(query.replace('?', '%s'), args)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
 class PostgresStore:
     def __init__(self, url):
-        self.db = connect(url, autocommit=True, row_factory=dict_row)
+        connection = connect(url, autocommit=True, row_factory=dict_row)
+        self.db = _CompatConnection(connection)
         with self.db.cursor() as cur:
             cur.execute('CREATE TABLE IF NOT EXISTS users(id BIGINT PRIMARY KEY,name TEXT NOT NULL,pair TEXT,state TEXT)')
             cur.execute('CREATE TABLE IF NOT EXISTS invites(token TEXT PRIMARY KEY,owner BIGINT NOT NULL,created TEXT NOT NULL)')
