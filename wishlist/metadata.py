@@ -19,6 +19,7 @@ BRIGHTDATA_COLLECTORS = {
     'market.yandex.ru': 'c_mtsxfbf82lhz6y1jjo',
     'mvideo.ru': 'c_mtsxpv772ly5ie73jp',
     'letu.ru': 'c_mtsxqxszvrxd192io',
+    'goldapple.ru': 'c_mtsy5eoe2azezgxvdg',
 }
 
 
