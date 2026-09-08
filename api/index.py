@@ -73,7 +73,7 @@ class handler(BaseHTTPRequestHandler):
         return open_store()
 
     def _session_uid(self, store, values):
-        token = values.get('session', [''])[0].strip()
+        token = (self.headers.get('X-Wishlist-Session', '') or values.get('session', [''])[0]).strip()
         return store.webapp_session_uid(token) if token else None
 
     def do_GET(self):

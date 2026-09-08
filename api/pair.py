@@ -33,7 +33,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             values = parse_qs(urlparse(self.path).query)
             store = self._store()
-            uid = self._uid(store, values.get('session', [''])[0])
+            uid = self._uid(store, self.headers.get('X-Wishlist-Session', '') or values.get('session', [''])[0])
             if not uid:
                 return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
             partner = store.partner(uid)
