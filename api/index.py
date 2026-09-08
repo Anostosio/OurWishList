@@ -25,6 +25,8 @@ def serial(row, owner_name, is_owner, viewer_id=None):
         'color': row['color'],
         'scope': row['scope'],
         'created': row['created'],
+        'priceChecked': row['price_checked'] or '',
+        'source': row['source'] if 'source' in row.keys() else '',
         'ownerName': owner_name,
         'isOwner': is_owner,
         'archived': bool(row['archived']),
@@ -137,7 +139,6 @@ class handler(BaseHTTPRequestHandler):
                 'card': {
                     **serial(row, owner['name'] if owner else '—', row['owner'] == uid, uid),
                     'note': row['note'],
-                    'priceChecked': row['price_checked'] or '',
                     'matchModeLabel': {
                         'unspecified': 'Вариант не уточнён',
                         'exact': 'Именно это',

@@ -46,6 +46,7 @@ class PostgresStore:
                 category TEXT NOT NULL DEFAULT 'other', match_mode TEXT NOT NULL DEFAULT 'unspecified',
                 size TEXT NOT NULL DEFAULT '', color TEXT NOT NULL DEFAULT '', price_checked TEXT NOT NULL DEFAULT ''
             )''')
+            cur.execute("ALTER TABLE wishes ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT ''")
             cur.execute('CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT)')
             cur.execute('CREATE TABLE IF NOT EXISTS webapp_sessions(token TEXT PRIMARY KEY,uid BIGINT NOT NULL,created TEXT NOT NULL)')
             cur.execute('CREATE INDEX IF NOT EXISTS idx_webapp_sessions_created ON webapp_sessions(created)')
@@ -129,15 +130,16 @@ class PostgresStore:
             return None
         return row['uid']
 
-    def add(self, uid, title, url='', image='', price='', note=''):
+    def add(self, uid, title, url='', image='', price='', note='', source=''):
         if url:
             duplicate = self._one('SELECT id FROM wishes WHERE owner=%s AND url=%s AND archived=0', (uid, url))
             if duplicate:
                 return duplicate['id'], False
         with self.db.cursor() as cur:
-            cur.execute('''INSERT INTO wishes(owner,title,url,image,price,note,created)
-                           VALUES(%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
-                        (uid, title[:200], url, image, price[:100], note[:1500], datetime.now(timezone.utc).isoformat()))
+            created = datetime.now(timezone.utc).isoformat()
+            cur.execute('''INSERT INTO wishes(owner,title,url,image,price,note,created,price_checked,source)
+                           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
+                        (uid, title[:200], url, image, price[:100], note[:1500], created, created if price else '', source[:255]))
             wid = cur.fetchone()['id']
         return wid, True
 
@@ -223,9 +225,9 @@ class PostgresStore:
         return row['value'] if row else None
 
     def export(self, uid):
-        return self._all('''SELECT id,title,url,price,note,scope,priority,archived,created,category,match_mode,size,color,price_checked
+        return self._all('''SELECT id,title,url,price,note,scope,priority,archived,created,category,match_mode,size,color,price_checked,source
                             FROM wishes WHERE owner=%s ORDER BY id''', (uid,))
 
-    def update_metadata(self, wid, title, image):
+    def update_metadata(self, wid, title, image, source=''):
         with self.db.cursor() as cur:
-            cur.execute('UPDATE wishes SET title=%s,image=%s WHERE id=%s', (title, image, wid))
+            cur.execute('UPDATE wishes SET title=%s,image=%s,source=%s WHERE id=%s', (title[:200], image, source[:255], wid))

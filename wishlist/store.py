@@ -37,6 +37,7 @@ class Store:
                 'match_mode': "TEXT NOT NULL DEFAULT 'unspecified'",
                 'size': "TEXT NOT NULL DEFAULT ''", 'color': "TEXT NOT NULL DEFAULT ''",
                 'price_checked': "TEXT NOT NULL DEFAULT ''",
+                'source': "TEXT NOT NULL DEFAULT ''",
             }.items():
                 if name not in columns:
                     self.db.execute(f'ALTER TABLE wishes ADD COLUMN {name} {definition}')
@@ -109,14 +110,15 @@ class Store:
             return None
         return row['uid']
 
-    def add(self, uid, title, url='', image='', price='', note=''):
+    def add(self, uid, title, url='', image='', price='', note='', source=''):
         if url:
             duplicate = self.db.execute('SELECT id FROM wishes WHERE owner=? AND url=? AND archived=0', (uid, url)).fetchone()
             if duplicate:
                 return duplicate['id'], False
         with self.db:
-            cur = self.db.execute('INSERT INTO wishes(owner,title,url,image,price,note,created) VALUES(?,?,?,?,?,?,?)',
-                                  (uid, title[:200], url, image, price[:100], note[:1500], datetime.now(timezone.utc).isoformat()))
+            created = datetime.now(timezone.utc).isoformat()
+            cur = self.db.execute('INSERT INTO wishes(owner,title,url,image,price,note,created,price_checked,source) VALUES(?,?,?,?,?,?,?,?,?)',
+                                  (uid, title[:200], url, image, price[:100], note[:1500], created, created if price else '', source[:255]))
         return cur.lastrowid, True
 
     def change(self, uid, wid, field, value):
@@ -213,3 +215,12 @@ class Store:
                 self.db.execute('INSERT OR REPLACE INTO settings VALUES(?,?)', (key, str(value)))
         row = self.db.execute('SELECT value FROM settings WHERE key=?', (key,)).fetchone()
         return row['value'] if row else None
+
+    def export(self, uid):
+        return self.db.execute('''SELECT id,title,url,price,note,scope,priority,archived,created,category,match_mode,size,color,price_checked,source
+                                  FROM wishes WHERE owner=? ORDER BY id''', (uid,)).fetchall()
+
+    def update_metadata(self, wid, title, image, source=''):
+        with self.db:
+            self.db.execute('UPDATE wishes SET title=?,image=?,source=? WHERE id=?',
+                            (title[:200], image, source[:255], wid))

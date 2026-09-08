@@ -45,6 +45,7 @@ class handler(BaseHTTPRequestHandler):
         title = str(payload.get('title') or '').strip()
         url = str(payload.get('url') or '').strip()
         image = str(payload.get('image') or '').strip()
+        source = str(payload.get('source') or '').strip()
         price = str(payload.get('price') or '').strip()
         note = str(payload.get('note') or '').strip()
         if not title:
@@ -54,7 +55,7 @@ class handler(BaseHTTPRequestHandler):
             store, uid, error = self._authorized(payload)
             if error:
                 return self._send({'ok': False, 'error': error[1]}, error[0])
-            wish_id, created = store.add(uid, title, url=url, image=image, price=price, note=note)
+            wish_id, created = store.add(uid, title, url=url, image=image, price=price, note=note, source=source)
             if created:
                 updates = {
                     'scope': str(payload.get('scope') or 'mine'),

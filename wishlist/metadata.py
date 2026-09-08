@@ -136,4 +136,6 @@ def parse(html, url):
 
 def extract(url):
     html, final = fetch(url)
-    return parse(html, final)
+    result = parse(html, final)
+    result['source'] = urlsplit(final).hostname or ''
+    return result

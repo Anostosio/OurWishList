@@ -467,8 +467,7 @@ class Bot:
         self.say(uid, 'Ссылка сохранена. Загружаю название, фото и цену…', {'inline_keyboard': []})
         try:
             data = extract(url)
-            with self.store.db:
-                self.store.db.execute('UPDATE wishes SET title=?,image=? WHERE id=?', (data['title'], data['image'], wid))
+            self.store.update_metadata(wid, data['title'], data['image'], data.get('source', ''))
             self.store.change(uid, wid, 'price', data['price'][:100])
         except Exception:
             self.say(uid, 'Магазин не отдал данные. Ссылка сохранена — название, цену и детали можно заполнить кнопками.')

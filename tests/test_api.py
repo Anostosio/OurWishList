@@ -11,6 +11,7 @@ class ApiSerializationTests(unittest.TestCase):
             'match_mode': 'unspecified', 'size': '', 'color': '',
             'scope': 'mine', 'created': '2026-09-08T00:00:00+00:00',
             'owner': owner, 'archived': 0, 'claimed_by': claimed_by,
+            'price_checked': '', 'source': '',
         }
 
     def test_claim_is_visible_only_to_the_partner_who_made_it(self):

@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wishlist.bot import Bot, card
-from wishlist.metadata import clean_url, parse, public_address, fetch
+from wishlist.metadata import clean_url, parse, public_address, fetch, extract
 from wishlist.store import Store
 
 
@@ -68,6 +68,17 @@ class WishlistTests(unittest.TestCase):
         result = parse('<script type="application/ld+json">' + json.dumps(data) + '</script>', 'https://example.com/item')
         self.assertEqual(result, {'title': 'Nice gift', 'image': 'https://example.com/image.jpg', 'price': '99 UAH'})
         self.assertEqual(parse('<meta property="og:title" content="A &amp; B">', 'https://example.com')['title'], 'A & B')
+
+    def test_extract_records_final_store_domain(self):
+        with patch('wishlist.metadata.fetch', return_value=('<title>Gift</title>', 'https://shop.example/product')):
+            result = extract('https://start.example/item')
+        self.assertEqual(result['source'], 'shop.example')
+
+    def test_initial_price_records_check_date_and_source(self):
+        wid, _ = self.s.add(1, 'Gift', price='99 UAH', source='shop.example')
+        row = self.s.wish(1, wid)
+        self.assertEqual(row['source'], 'shop.example')
+        self.assertTrue(row['price_checked'])
 
     def test_hostile_metadata_and_html_escape(self):
         self.assertEqual(parse('<script type="application/ld+json">bad json</script><title>Fallback</title>', 'https://example.com')['title'], 'Fallback')
