@@ -22,9 +22,12 @@ def create_values(payload):
     priority = int(payload.get('priority', 1))
     if scope not in ('mine', 'shared') or category not in CATEGORIES or match_mode not in MATCH_MODES or priority not in (0, 1, 2):
         raise ValueError('Проверьте заполненные поля')
+    image = str(payload.get('image') or '').strip()
+    if image.startswith('data:') and (not image.startswith(('data:image/jpeg;base64,', 'data:image/webp;base64,', 'data:image/png;base64,')) or len(image) > 320_000):
+        raise ValueError('Фотография слишком большая или имеет неподдерживаемый формат')
     return {
         'title': title, 'url': url,
-        'image': str(payload.get('image') or '').strip(),
+        'image': image,
         'source': (urlsplit(url).hostname or '') if url else '',
         'price': str(payload.get('price') or '').strip(),
         'note': str(payload.get('note') or '').strip(),
@@ -50,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
 
     def _payload(self):
         length = int(self.headers.get('Content-Length', '0') or 0)
-        if length > 50_000:
+        if length > 400_000:
             raise ValueError('Слишком большой запрос')
         return json.loads(self.rfile.read(length) or b'{}')
 
@@ -112,9 +115,12 @@ class handler(BaseHTTPRequestHandler):
                     'match_mode': str(payload.get('matchMode') or 'unspecified'),
                     'size': str(payload.get('size') or '')[:100],
                     'color': str(payload.get('color') or '')[:100],
+                    'image': str(payload.get('image') or '').strip(),
                 }
                 if not values['title'] or values['category'] not in CATEGORIES or values['match_mode'] not in MATCH_MODES:
                     raise ValueError('Некорректные поля')
+                if values['image'].startswith('data:') and (not values['image'].startswith(('data:image/jpeg;base64,', 'data:image/webp;base64,', 'data:image/png;base64,')) or len(values['image']) > 320_000):
+                    raise ValueError('Некорректная фотография')
                 for field, value in values.items():
                     store.change(uid, wish_id, field, value)
             else:

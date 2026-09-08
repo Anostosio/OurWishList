@@ -176,6 +176,25 @@ def _slug_title(value):
     return value[:1].upper() + value[1:200] if value else ''
 
 
+def _russian_slug_title(value):
+    text = _slug_title(value).lower()
+    for latin, cyrillic in (
+        ('shch', 'щ'), ('yo', 'ё'), ('zh', 'ж'), ('kh', 'х'), ('ts', 'ц'),
+        ('ch', 'ч'), ('sh', 'ш'), ('yu', 'ю'), ('ya', 'я'),
+        ('yy', 'ый'), ('iy', 'ий')
+    ):
+        text = text.replace(latin, cyrillic)
+    table = str.maketrans({
+        'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е',
+        'z': 'з', 'i': 'и', 'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м',
+        'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т',
+        'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'к', 'y': 'ы', 'x': 'кс',
+        'q': 'к', 'w': 'в'
+    })
+    text = text.translate(table)
+    return text[:1].upper() + text[1:200] if text else ''
+
+
 class _SafeRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         parts = urlsplit(clean_url(newurl))
@@ -241,7 +260,7 @@ def marketplace_fallback(url):
     for pattern in patterns:
         match = re.search(pattern, path)
         if match:
-            result['title'] = _slug_title(match.group(1))
+            result['title'] = _russian_slug_title(match.group(1)) if host.endswith('market.yandex.ru') else _slug_title(match.group(1))
             break
     result['title'] = result['title'] or generic
     return result

@@ -33,6 +33,12 @@ class ApiSerializationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_values({'title': 'Gift', 'priority': 9})
 
+    def test_small_uploaded_photo_is_accepted_and_large_data_is_rejected(self):
+        image = 'data:image/jpeg;base64,' + 'a' * 100
+        self.assertEqual(create_values({'title': 'Gift', 'image': image})['image'], image)
+        with self.assertRaises(ValueError):
+            create_values({'title': 'Gift', 'image': 'data:image/jpeg;base64,' + 'a' * 320_000})
+
     def test_mini_app_does_not_inherit_hidden_bot_filters(self):
         store = Store(':memory:')
         store.user(1, 'Автор')

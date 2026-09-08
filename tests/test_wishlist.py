@@ -78,7 +78,7 @@ class WishlistTests(unittest.TestCase):
     def test_marketplace_fallbacks_when_pages_block_automated_requests(self):
         cases = {
             'https://www.ozon.ru/product/kubik-rubik-3x3-220937393/': 'Kubik rubik 3x3',
-            'https://market.yandex.ru/product--umnye-chasy/123456': 'Umnye chasy',
+            'https://market.yandex.ru/product--umnye-chasy/123456': 'Умные часы',
             'https://www.poizon.com/product/teenmix-sneakers-627855963': 'Teenmix sneakers',
         }
         for url, title in cases.items():
@@ -110,7 +110,7 @@ class WishlistTests(unittest.TestCase):
         target = 'https://market.yandex.ru/card/shvabra-s-otzhimom-i-vedrom/103760449703'
         encoded = base64.urlsafe_b64encode(target.encode()).decode().rstrip('=')
         result = marketplace_fallback(f'https://market.yandex.ru/showcaptcha?retpath={encoded}_deadbeef')
-        self.assertEqual(result['title'], 'Shvabra s otzhimom i vedrom')
+        self.assertEqual(result['title'], 'Швабра с отжимом и ведром')
 
     def test_initial_price_records_check_date_and_source(self):
         wid, _ = self.s.add(1, 'Gift', price='99 UAH', source='shop.example')
