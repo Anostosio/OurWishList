@@ -410,6 +410,44 @@ def _brightdata_collector(url, collector):
     return None
 
 
+def brightdata_trigger(url, collector):
+    """Start one collector job; callers can poll it without holding a function open."""
+    token = os.environ.get('BRIGHTDATA_API_TOKEN', '').strip()
+    if not token or not collector:
+        return ''
+    request = Request(
+        f'https://api.brightdata.com/dca/trigger?collector={collector}&queue_next=1',
+        data=json.dumps([{'url': clean_url(url)}]).encode(),
+        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+        method='POST')
+    try:
+        with build_opener().open(request, timeout=8) as response:
+            payload = json.loads(response.read(50_001).decode('utf-8'))
+        job_id = payload if isinstance(payload, str) else payload.get('id') or payload.get('collection_id')
+        return str(job_id) if job_id and re.fullmatch(r'[A-Za-z0-9_-]+', str(job_id)) else ''
+    except Exception:
+        return ''
+
+
+def brightdata_poll(job_id, source):
+    """Return (ready, result); a pending job is not an error."""
+    token = os.environ.get('BRIGHTDATA_API_TOKEN', '').strip()
+    if not token or not re.fullmatch(r'[A-Za-z0-9_-]+', str(job_id or '')):
+        return True, None
+    request = Request(
+        f'https://api.brightdata.com/dca/dataset?id={job_id}',
+        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
+    try:
+        with build_opener().open(request, timeout=8) as response:
+            if response.status == 202:
+                return False, None
+            payload = json.loads(response.read(500_001).decode('utf-8'))
+        item = payload[0] if isinstance(payload, list) and payload else payload
+        return True, _brightdata_result(item, source)
+    except Exception:
+        return False, None
+
+
 def _collector_for(url):
     host = (urlsplit(url).hostname or '').lower()
     for domain, collector in BRIGHTDATA_COLLECTORS.items():
