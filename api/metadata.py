@@ -47,7 +47,7 @@ class handler(BaseHTTPRequestHandler):
             if action == 'poll':
                 ticket = str(payload.get('ticket') or '')
                 try:
-                    job_id, source, signature = ticket.split('.', 2)
+                    job_id, source, signature = ticket.split('~', 2)
                 except ValueError:
                     return self._send({'ok': False, 'error': 'Некорректная задача'}, 400)
                 key = str(os.environ.get('BOT_TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN') or '').encode()
@@ -70,7 +70,7 @@ class handler(BaseHTTPRequestHandler):
                     key = str(os.environ.get('BOT_TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN') or '').encode()
                     signature = hmac.new(key, f'{job_id}.{host}'.encode(), hashlib.sha256).hexdigest()
                     return self._send({'ok': True, 'pending': True,
-                                       'ticket': f'{job_id}.{host}.{signature}', 'url': url}, 202)
+                                       'ticket': f'{job_id}~{host}~{signature}', 'url': url}, 202)
             data = extract(url)
             return self._send({'ok': True, 'url': url, **data})
         except ValueError:
