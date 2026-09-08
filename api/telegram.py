@@ -8,6 +8,9 @@ from wishlist.store import Store
 
 
 class handler(BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        return
+
     def _send(self, payload, status=200):
         raw = json.dumps(payload, ensure_ascii=False).encode('utf-8')
         self.send_response(status)

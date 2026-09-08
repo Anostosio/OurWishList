@@ -35,6 +35,9 @@ def create_values(payload):
 
 
 class handler(BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        return
+
     def _send(self, payload, status=200):
         body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
         self.send_response(status)

@@ -55,6 +55,9 @@ def filtered_rows(store, uid, kind, query, category, budget, sort):
 
 
 class handler(BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        return
+
     def _send(self, payload, status=200):
         body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
         self.send_response(status)
