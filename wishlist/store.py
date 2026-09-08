@@ -95,8 +95,10 @@ class Store:
         token = secrets.token_urlsafe(24)
         created = datetime.now(timezone.utc).isoformat()
         with self.db:
-            self.db.execute('DELETE FROM webapp_sessions WHERE uid=? OR created < ?', (uid, (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()))
+            self.db.execute('DELETE FROM webapp_sessions WHERE created < ?', ((datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(),))
             self.db.execute('INSERT INTO webapp_sessions(token,uid,created) VALUES(?,?,?)', (token, uid, created))
+            self.db.execute('''DELETE FROM webapp_sessions WHERE uid=? AND token NOT IN
+                               (SELECT token FROM webapp_sessions WHERE uid=? ORDER BY created DESC LIMIT 5)''', (uid, uid))
         return token
 
     def webapp_session_uid(self, token):

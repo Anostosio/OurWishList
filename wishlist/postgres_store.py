@@ -115,8 +115,10 @@ class PostgresStore:
         created = datetime.now(timezone.utc).isoformat()
         cutoff = (datetime.now(timezone.utc)-timedelta(hours=24)).isoformat()
         with self.db.cursor() as cur:
-            cur.execute('DELETE FROM webapp_sessions WHERE uid=%s OR created < %s', (uid, cutoff))
+            cur.execute('DELETE FROM webapp_sessions WHERE created < %s', (cutoff,))
             cur.execute('INSERT INTO webapp_sessions(token,uid,created) VALUES(%s,%s,%s)', (token, uid, created))
+            cur.execute('''DELETE FROM webapp_sessions WHERE uid=%s AND token NOT IN
+                           (SELECT token FROM webapp_sessions WHERE uid=%s ORDER BY created DESC LIMIT 5)''', (uid, uid))
         return token
 
     def webapp_session_uid(self, token):

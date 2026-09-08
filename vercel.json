@@ -1,5 +1,13 @@
 {
   "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    }
+  ],
   "builds": [
     { "src": "wishlist/miniapp/index.html", "use": "@vercel/static" },
     { "src": "wishlist/miniapp/assets/**", "use": "@vercel/static" },

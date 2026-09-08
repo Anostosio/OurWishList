@@ -94,6 +94,17 @@ class WishlistTests(unittest.TestCase):
         self.assertEqual(result['image'], 'https://basket-05.wbbasket.ru/vol860/part86035/86035817/images/big/1.webp')
         self.assertTrue(result['partial'])
 
+    def test_short_marketplace_links_still_create_editable_drafts(self):
+        cases = {
+            'https://www.ozon.ru/t/abc123': 'Товар Ozon',
+            'https://market.yandex.ru/cc/abc123': 'Товар с Яндекс Маркета',
+        }
+        for url, title in cases.items():
+            with self.subTest(url=url), patch('wishlist.metadata.fetch', side_effect=ValueError('blocked')):
+                result = extract(url)
+                self.assertEqual(result['title'], title)
+                self.assertTrue(result['partial'])
+
     def test_initial_price_records_check_date_and_source(self):
         wid, _ = self.s.add(1, 'Gift', price='99 UAH', source='shop.example')
         row = self.s.wish(1, wid)
@@ -178,6 +189,13 @@ class WishlistTests(unittest.TestCase):
         self.assertTrue(url.startswith('https://ourwishlist-silk.vercel.app?session='))
         token = url.split('session=', 1)[1].split('&', 1)[0]
         self.assertEqual(self.s.webapp_session_uid(token), 1)
+
+    def test_opening_app_on_another_device_keeps_previous_session(self):
+        first = self.s.create_webapp_session(1)
+        second = self.s.create_webapp_session(1)
+        self.assertNotEqual(first, second)
+        self.assertEqual(self.s.webapp_session_uid(first), 1)
+        self.assertEqual(self.s.webapp_session_uid(second), 1)
 
     def test_partner_can_join_through_start_link_once(self):
         owner_store = Store(':memory:')

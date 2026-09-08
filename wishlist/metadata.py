@@ -196,10 +196,13 @@ def marketplace_fallback(url):
     patterns = []
     if host.endswith('ozon.ru'):
         patterns = [r'/product/(.+?)-\d+/?$']
+        generic = 'Товар Ozon'
     elif host.endswith('market.yandex.ru'):
         patterns = [r'/product--([^/]+)/\d+', r'/card/([^/]+)/\d+']
+        generic = 'Товар с Яндекс Маркета'
     elif host.endswith('poizon.com'):
         patterns = [r'/product/(.+?)-\d+/?$', r'/product/([^/]+)/?$']
+        generic = 'Товар Poizon'
     else:
         return None
     for pattern in patterns:
@@ -207,7 +210,8 @@ def marketplace_fallback(url):
         if match:
             result['title'] = _slug_title(match.group(1))
             break
-    return result if result['title'] else None
+    result['title'] = result['title'] or generic
+    return result
 
 
 def extract(url):
