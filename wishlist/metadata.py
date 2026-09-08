@@ -3,9 +3,10 @@ import http.client
 import ipaddress
 import json
 import socket
+import re
 import ssl
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
 LIMIT = 2_000_000
 
@@ -134,8 +135,97 @@ def parse(html, url):
             'price': f'{price} {currency}'.strip() if price != '' and price is not None else ''}
 
 
+def _wb_basket(volume):
+    limits = (143, 287, 431, 719, 1007, 1061, 1115, 1169, 1313, 1601, 1655,
+              1919, 2045, 2189, 2405, 2621, 2837, 3053, 3269, 3485, 3701, 3917,
+              4133, 4349)
+    for number, maximum in enumerate(limits, 1):
+        if volume <= maximum:
+            return number
+    return 25
+
+
+def _json(url):
+    parts = urlsplit(clean_url(url))
+    host = parts.hostname.encode('idna').decode('ascii')
+    address = public_address(host)
+    port = parts.port or 443
+    conn = http.client.HTTPConnection(host, port, timeout=6)
+    try:
+        conn.sock = socket.create_connection((address, port), timeout=6)
+        conn.sock = ssl.create_default_context().wrap_socket(conn.sock, server_hostname=host)
+        path = parts.path + (('?' + parts.query) if parts.query else '')
+        conn.request('GET', path, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Accept-Encoding': 'identity'})
+        response = conn.getresponse()
+        if response.status != 200:
+            raise ValueError('Источник не вернул данные.')
+        body = response.read(500_001)
+        if len(body) > 500_000:
+            raise ValueError('Ответ источника слишком большой.')
+        return json.loads(body.decode('utf-8'))
+    finally:
+        conn.close()
+
+
+def _slug_title(value):
+    value = unquote(value).replace('-', ' ').replace('_', ' ')
+    value = re.sub(r'\s+', ' ', value).strip(' /')
+    return value[:1].upper() + value[1:200] if value else ''
+
+
+def marketplace_fallback(url):
+    """Return safe best-effort fields when a marketplace blocks page scraping."""
+    parts = urlsplit(clean_url(url))
+    host, path = parts.hostname.lower(), parts.path
+    result = {'title': '', 'image': '', 'price': '', 'source': host, 'partial': True}
+    if host.endswith('wildberries.ru'):
+        match = re.search(r'/catalog/(\d+)', path)
+        if not match:
+            return None
+        item = int(match.group(1)); volume, part = item // 100000, item // 1000
+        basket = _wb_basket(volume)
+        base = f'https://basket-{basket:02d}.wbbasket.ru/vol{volume}/part{part}/{item}'
+        try:
+            card = _json(base + '/info/ru/card.json')
+            result['title'] = str(card.get('imt_name') or card.get('subj_name') or '').strip()[:200]
+        except Exception:
+            pass
+        result['title'] = result['title'] or f'Товар Wildberries №{item}'
+        result['image'] = base + '/images/big/1.webp'
+        return result
+    patterns = []
+    if host.endswith('ozon.ru'):
+        patterns = [r'/product/(.+?)-\d+/?$']
+    elif host.endswith('market.yandex.ru'):
+        patterns = [r'/product--([^/]+)/\d+', r'/card/([^/]+)/\d+']
+    elif host.endswith('poizon.com'):
+        patterns = [r'/product/(.+?)-\d+/?$', r'/product/([^/]+)/?$']
+    else:
+        return None
+    for pattern in patterns:
+        match = re.search(pattern, path)
+        if match:
+            result['title'] = _slug_title(match.group(1))
+            break
+    return result if result['title'] else None
+
+
 def extract(url):
-    html, final = fetch(url)
-    result = parse(html, final)
-    result['source'] = urlsplit(final).hostname or ''
-    return result
+    fallback = marketplace_fallback(url)
+    try:
+        html, final = fetch(url)
+        result = parse(html, final)
+        result['source'] = urlsplit(final).hostname or ''
+        redirected = urlsplit(final).path != urlsplit(url).path
+        if fallback:
+            if redirected or not result.get('title') or (not result.get('image') and not result.get('price')):
+                result['title'] = fallback.get('title') or result.get('title', '')
+            if not result.get('image'):
+                result['image'] = fallback.get('image', '')
+            result['partial'] = not bool(result.get('price'))
+            result['source'] = fallback.get('source') or result['source']
+        return result
+    except ValueError:
+        if fallback:
+            return fallback
+        raise

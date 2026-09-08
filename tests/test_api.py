@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import patch
 
-from api.index import serial
+from api.index import serial, filtered_rows
 from api.wish import create_values
+from wishlist.store import Store
 
 
 class ApiSerializationTests(unittest.TestCase):
@@ -31,6 +32,16 @@ class ApiSerializationTests(unittest.TestCase):
             create_values({'title': 'Gift', 'category': 'unknown'})
         with self.assertRaises(ValueError):
             create_values({'title': 'Gift', 'priority': 9})
+
+    def test_mini_app_does_not_inherit_hidden_bot_filters(self):
+        store = Store(':memory:')
+        store.user(1, 'Автор')
+        wid, _ = store.add(1, 'Общее желание')
+        store.change(1, wid, 'scope', 'shared')
+        store.filters(1, {'query': 'другое', 'category': 'tech'})
+        rows = filtered_rows(store, 1, 'shared', '', '', '', 'priority')
+        self.assertEqual([row['id'] for row in rows], [wid])
+        store.db.close()
 
 
 if __name__ == '__main__':

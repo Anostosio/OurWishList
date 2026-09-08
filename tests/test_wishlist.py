@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wishlist.bot import Bot, card
-from wishlist.metadata import clean_url, parse, public_address, fetch, extract
+from wishlist.metadata import clean_url, parse, public_address, fetch, extract, marketplace_fallback
 from wishlist.store import Store
 
 
@@ -73,6 +73,26 @@ class WishlistTests(unittest.TestCase):
         with patch('wishlist.metadata.fetch', return_value=('<title>Gift</title>', 'https://shop.example/product')):
             result = extract('https://start.example/item')
         self.assertEqual(result['source'], 'shop.example')
+
+    def test_marketplace_fallbacks_when_pages_block_automated_requests(self):
+        cases = {
+            'https://www.ozon.ru/product/kubik-rubik-3x3-220937393/': 'Kubik rubik 3x3',
+            'https://market.yandex.ru/product--umnye-chasy/123456': 'Umnye chasy',
+            'https://www.poizon.com/product/teenmix-sneakers-627855963': 'Teenmix sneakers',
+        }
+        for url, title in cases.items():
+            with self.subTest(url=url), patch('wishlist.metadata.fetch', side_effect=ValueError('blocked')):
+                result = extract(url)
+                self.assertEqual(result['title'], title)
+                self.assertTrue(result['partial'])
+
+    def test_wildberries_fallback_uses_public_product_assets(self):
+        url = 'https://www.wildberries.ru/catalog/86035817/detail.aspx'
+        with patch('wishlist.metadata._json', return_value={'imt_name': 'Настольный вентилятор'}):
+            result = marketplace_fallback(url)
+        self.assertEqual(result['title'], 'Настольный вентилятор')
+        self.assertEqual(result['image'], 'https://basket-05.wbbasket.ru/vol860/part86035/86035817/images/big/1.webp')
+        self.assertTrue(result['partial'])
 
     def test_initial_price_records_check_date_and_source(self):
         wid, _ = self.s.add(1, 'Gift', price='99 UAH', source='shop.example')

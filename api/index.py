@@ -36,7 +36,9 @@ def serial(row, owner_name, is_owner, viewer_id=None):
 
 
 def filtered_rows(store, uid, kind, query, category, budget, sort):
-    rows = list(store.browse(uid, kind))
+    # The bot keeps its own saved filters in the store. Mini App filters arrive
+    # in this request and must start from the complete list.
+    rows = list(store.browse(uid, kind, apply_filters=False))
     if query:
         term = query.casefold()
         rows = [row for row in rows if term in ' '.join((

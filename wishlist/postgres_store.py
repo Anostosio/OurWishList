@@ -174,7 +174,7 @@ class PostgresStore:
             self.setting(key, json.dumps(result, ensure_ascii=False))
         return result
 
-    def browse(self, uid, kind):
+    def browse(self, uid, kind, apply_filters=True):
         if kind not in KINDS:
             raise ValueError('Неизвестный список.')
         partner = self.partner(uid)
@@ -190,6 +190,8 @@ class PostgresStore:
         else:
             scope = 'shared' if kind == 'shared' else 'mine'
             rows = self._all('SELECT * FROM wishes WHERE owner = ANY(%s) AND archived=0 AND scope=%s ORDER BY priority DESC,id DESC', (ids, scope))
+        if not apply_filters:
+            return rows
         filters = self.filters(uid)
         term = filters['query'].casefold()
         if term:
