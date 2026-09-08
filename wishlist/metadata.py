@@ -57,9 +57,9 @@ def fetch(url):
                 continue
             if response.status != 200 or 'html' not in response.getheader('Content-Type', '').lower():
                 raise ValueError('Магазин не вернул страницу товара.')
-            body = response.read(LIMIT + 1)
-            if len(body) > LIMIT:
-                raise ValueError('Страница слишком большая.')
+            # Product metadata normally lives in <head>. Read a bounded prefix
+            # instead of rejecting modern storefront pages that are several MB.
+            body = response.read(LIMIT)
             return body.decode('utf-8', errors='replace'), url
         finally:
             conn.close()
@@ -76,7 +76,9 @@ class MetadataParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         if tag == 'meta':
-            self.meta[attrs.get('property', attrs.get('name', ''))] = attrs.get('content', '')
+            key = attrs.get('property') or attrs.get('name') or attrs.get('itemprop') or ''
+            if key and attrs.get('content') and key not in self.meta:
+                self.meta[key] = attrs['content']
         if tag == 'title':
             self.in_title = True
         if tag == 'script' and attrs.get('type', '').lower() == 'application/ld+json':
@@ -120,8 +122,12 @@ def parse(html, url):
                 break
         except (ValueError, RecursionError):
             continue
-    title = product.get('name') or parser.meta.get('og:title') or parser.title or urlsplit(url).hostname
-    picture = product.get('image') or parser.meta.get('og:image', '')
+    title = (product.get('name') or parser.meta.get('og:title') or
+             parser.meta.get('twitter:title') or parser.meta.get('name') or
+             parser.title or urlsplit(url).hostname)
+    picture = (product.get('image') or parser.meta.get('og:image') or
+               parser.meta.get('og:image:url') or parser.meta.get('twitter:image') or
+               parser.meta.get('image', ''))
     if isinstance(picture, list):
         picture = picture[0] if picture else ''
     if isinstance(picture, dict):
@@ -131,8 +137,17 @@ def parse(html, url):
         offer = offer[0] if offer else {}
     if not isinstance(offer, dict):
         offer = {}
-    price = offer.get('price', parser.meta.get('product:price:amount', ''))
-    currency = offer.get('priceCurrency', parser.meta.get('product:price:currency', ''))
+    specification = offer.get('priceSpecification', {})
+    if isinstance(specification, list):
+        specification = specification[0] if specification else {}
+    if not isinstance(specification, dict):
+        specification = {}
+    price = (offer.get('price') or offer.get('lowPrice') or
+             specification.get('price') or parser.meta.get('product:price:amount') or
+             parser.meta.get('og:price:amount') or parser.meta.get('price') or '')
+    currency = (offer.get('priceCurrency') or specification.get('priceCurrency') or
+                parser.meta.get('product:price:currency') or
+                parser.meta.get('og:price:currency') or parser.meta.get('priceCurrency') or '')
     return {'title': ' '.join(str(title).split())[:200],
             'image': urljoin(url, picture) if isinstance(picture, str) and picture else '',
             'price': f'{price} {currency}'.strip() if price != '' and price is not None else ''}
@@ -242,8 +257,16 @@ def marketplace_fallback(url):
             result['title'] = str(card.get('imt_name') or card.get('subj_name') or '').strip()[:200]
         except Exception:
             pass
+        try:
+            history = _json(base + '/info/price-history.json')
+            current = history[-1].get('price', {}).get('RUB') if isinstance(history, list) and history else None
+            if isinstance(current, (int, float)):
+                result['price'] = f'{current / 100:.2f} RUB'
+        except Exception:
+            pass
         result['title'] = result['title'] or f'Товар Wildberries №{item}'
         result['image'] = base + '/images/big/1.webp'
+        result['partial'] = not bool(result['price'])
         return result
     patterns = []
     if host.endswith('ozon.ru'):
@@ -255,12 +278,43 @@ def marketplace_fallback(url):
     elif host.endswith('poizon.com'):
         patterns = [r'/product/(.+?)-\d+/?$', r'/product/([^/]+)/?$']
         generic = 'Товар Poizon'
+    elif host.endswith('lamoda.ru'):
+        patterns = [r'/p/[^/]+/([^/]+)/?$']
+        generic = 'Товар Lamoda'
+    elif host.endswith('eldorado.ru'):
+        patterns = [r'/cat/detail/([^/]+)/?$']
+        generic = 'Товар Эльдорадо'
+    elif host.endswith('dns-shop.ru'):
+        patterns = [r'/product/[^/]+/([^/]+)/?$']
+        generic = 'Товар DNS'
+    elif host.endswith('hoff.ru'):
+        patterns = [r'/catalog/[^/]+/([^/]+)/?$']
+        generic = 'Товар Hoff'
+    elif host.endswith('letu.ru'):
+        patterns = [r'/product/([^/]+)/\d+/?$']
+        generic = 'Товар ЛЭТУАЛЬ'
+    elif host.endswith('goldapple.ru'):
+        patterns = [r'/[^/]+/([^/]+)-\d+/?$']
+        generic = 'Товар Золотого Яблока'
+    elif host.endswith('sportmaster.ru'):
+        patterns = [r'/product/(\d+)/?$']
+        generic = 'Товар Спортмастер'
+    elif host.endswith('mvideo.ru'):
+        patterns = [r'/products/(.+?)-\d+/?$']
+        generic = 'Товар М.Видео'
+    elif host.endswith('aliexpress.ru') or host.endswith('aliexpress.com'):
+        patterns = []
+        generic = 'Товар AliExpress'
     else:
         return None
     for pattern in patterns:
         match = re.search(pattern, path)
         if match:
-            result['title'] = _russian_slug_title(match.group(1)) if host.endswith('market.yandex.ru') else _slug_title(match.group(1))
+            value = match.group(1)
+            if not value.isdigit():
+                result['title'] = (_russian_slug_title(value)
+                                   if host.endswith('market.yandex.ru') or host.endswith('dns-shop.ru')
+                                   else _slug_title(value))
             break
     result['title'] = result['title'] or generic
     return result
@@ -278,7 +332,10 @@ def extract(url):
         fallback = marketplace_fallback(final) or fallback
         redirected = urlsplit(final).path != urlsplit(url).path
         if fallback:
-            if redirected or not result.get('title') or (not result.get('image') and not result.get('price')):
+            shell_titles = {'l\'etoile', 'lamoda', 'ozon', 'wildberries', 'яндекс маркет',
+                            'м.видео', 'dns', 'hoff', 'спортмастер'}
+            weak_title = str(result.get('title', '')).strip().lower() in shell_titles
+            if redirected or weak_title or not result.get('title') or (not result.get('image') and not result.get('price')):
                 result['title'] = fallback.get('title') or result.get('title', '')
             if not result.get('image'):
                 result['image'] = fallback.get('image', '')

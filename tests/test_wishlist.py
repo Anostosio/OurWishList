@@ -70,6 +70,21 @@ class WishlistTests(unittest.TestCase):
         self.assertEqual(result, {'title': 'Nice gift', 'image': 'https://example.com/image.jpg', 'price': '99 UAH'})
         self.assertEqual(parse('<meta property="og:title" content="A &amp; B">', 'https://example.com')['title'], 'A & B')
 
+    def test_microdata_and_extended_offer_metadata(self):
+        html = ('<meta itemprop="name" content="Coffee machine">'
+                '<meta itemprop="image" content="/coffee.jpg">'
+                '<meta property="og:price:amount" content="12990">'
+                '<meta property="og:price:currency" content="RUB">')
+        self.assertEqual(parse(html, 'https://shop.example/item'), {
+            'title': 'Coffee machine', 'image': 'https://shop.example/coffee.jpg',
+            'price': '12990 RUB'})
+
+        data = {'@type': 'Product', 'name': 'Chair', 'offers': {
+            'lowPrice': '4999', 'priceCurrency': 'RUB'}}
+        result = parse('<script type="application/ld+json">' + json.dumps(data) + '</script>',
+                       'https://shop.example/chair')
+        self.assertEqual(result['price'], '4999 RUB')
+
     def test_extract_records_final_store_domain(self):
         with patch('wishlist.metadata.fetch', return_value=('<title>Gift</title>', 'https://shop.example/product')):
             result = extract('https://start.example/item')
@@ -89,11 +104,14 @@ class WishlistTests(unittest.TestCase):
 
     def test_wildberries_fallback_uses_public_product_assets(self):
         url = 'https://www.wildberries.ru/catalog/86035817/detail.aspx'
-        with patch('wishlist.metadata._json', return_value={'imt_name': 'Настольный вентилятор'}):
+        with patch('wishlist.metadata._json', side_effect=[
+                {'imt_name': 'Настольный вентилятор'},
+                [{'price': {'RUB': 249900}}]]):
             result = marketplace_fallback(url)
         self.assertEqual(result['title'], 'Настольный вентилятор')
         self.assertEqual(result['image'], 'https://basket-05.wbbasket.ru/vol860/part86035/86035817/images/big/1.webp')
-        self.assertTrue(result['partial'])
+        self.assertEqual(result['price'], '2499.00 RUB')
+        self.assertFalse(result['partial'])
 
     def test_short_marketplace_links_still_create_editable_drafts(self):
         cases = {
