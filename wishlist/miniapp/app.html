@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OurWishList</title>
+<style>
+:root,[data-theme="light"]{--bg:#f4f9ec;--surface:#fff;--surface-soft:#f8fbf1;--line:#d8e5be;--text:#1a241a;--muted:#65735c;--accent:#91c65f;--accent-strong:#77b64a;--accent-soft:rgba(145,198,95,.16);--shadow:0 14px 34px rgba(67,91,38,.12)}
+[data-theme="dark"]{--bg:#151c1a;--surface:#1c2523;--surface-soft:#1f2927;--line:#2d3a35;--text:#eaf4ea;--muted:#9fb2a6;--accent:#8fcd70;--accent-strong:#73b85a;--accent-soft:rgba(143,205,112,.18);--shadow:0 14px 34px rgba(0,0,0,.28)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,Arial,sans-serif;color:var(--text);background:radial-gradient(circle at top,#dce9bd,var(--bg) 52%)}[data-theme="dark"] body{background:radial-gradient(circle at top,#24352c,var(--bg) 54%)}
+.page{max-width:920px;margin:0 auto;padding:12px;display:grid;gap:14px}.panel{border:1px solid var(--line);border-radius:20px;background:color-mix(in oklab,var(--surface) 88%,transparent);box-shadow:var(--shadow);padding:16px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand img{width:54px;height:54px;object-fit:contain;flex:0 0 54px}.brand h1{margin:0;font-size:clamp(27px,5vw,36px);line-height:1;letter-spacing:-1px;white-space:nowrap}.brand h1 span{color:var(--accent-strong)}.tagline{margin:7px 0 0 66px;color:var(--muted);font-size:13px}.actions{display:flex;gap:8px;align-items:center}.theme,.add,.pager button{border:1px solid var(--line);background:var(--surface-soft);color:var(--text);border-radius:13px;padding:11px 14px;font:inherit;cursor:pointer}.theme{border-radius:999px;font-weight:650}.add,.empty-add{background:linear-gradient(180deg,#9edb78,var(--accent));border-color:var(--accent-strong);color:#fff;font-weight:750}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}.tab{border:1px solid var(--line);background:var(--surface-soft);color:var(--muted);border-radius:14px;padding:12px 8px;font:inherit;font-weight:700;cursor:pointer}.tab.active{background:linear-gradient(180deg,#9edb78,var(--accent));border-color:var(--accent-strong);color:#142011}
+.status{margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--accent-soft);color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{border:1px solid var(--line);background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}.media{position:relative;aspect-ratio:4/3;background:var(--surface-soft)}.media img{width:100%;height:100%;object-fit:cover;display:block}.placeholder{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}.badge,.price{position:absolute;top:10px;border:1px solid var(--line);border-radius:999px;padding:5px 8px;background:color-mix(in oklab,var(--surface) 88%,transparent);font-size:12px}.badge{left:10px}.price{right:10px;color:var(--accent-strong);font-weight:800}.card-body{padding:12px}.card-body h2{margin:0 0 6px;font-size:18px}.muted{color:var(--muted);font-size:13px}.meta{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}.chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted)}.note{white-space:pre-wrap;color:var(--muted);font-size:13px}.card-actions{display:flex;gap:8px;padding:0 12px 12px}.card-actions a{border:1px solid var(--line);border-radius:9px;padding:7px 9px;text-decoration:none;color:var(--text);background:var(--surface-soft);font-size:12px}
+.empty{grid-column:1/-1;min-height:360px;border:1px solid var(--line);border-radius:20px;background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:38px 20px}.empty img{width:210px;max-width:55vw;height:auto;object-fit:contain;margin-bottom:18px}.empty strong{font-size:23px;margin-bottom:8px}.empty p{margin:0;color:var(--muted)}.empty-add{margin-top:20px;border-radius:13px;padding:12px 18px;font:inherit;cursor:pointer}.pager{display:flex;gap:10px}.pager button{flex:1}.pager button:disabled{opacity:.45;cursor:not-allowed}.footer{text-align:center;color:var(--muted);font-size:12px;padding:2px 0 8px}
+@media(max-width:650px){.page{padding:8px}.panel{padding:12px}.top{align-items:flex-start}.brand img{width:46px;height:46px;flex-basis:46px}.brand h1{font-size:26px}.tagline{margin-left:58px;font-size:12px}.actions{gap:6px}.theme,.add{padding:9px 10px;font-size:12px}.tabs{gap:6px}.tab{padding:10px 4px;font-size:12px}.grid{grid-template-columns:1fr}.empty{min-height:330px}.empty img{width:180px}}
+</style>
+</head>
+<body>
+<div class="page">
+<section class="panel">
+  <div class="top">
+    <div>
+      <div class="brand"><img src="/assets/logo_mark.png?v=6" alt=""><h1>Our<span>Wish</span>List</h1></div>
+      <div class="tagline">Желания, которые сближают</div>
+    </div>
+    <div class="actions"><button id="theme" class="theme">☀️ Светлая</button><button id="add" class="add">＋ Добавить</button></div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-kind="mine">Моё</button>
+    <button class="tab" data-kind="partner">Партнёра</button>
+    <button class="tab" data-kind="shared">Общее</button>
+    <button class="tab" data-kind="archive">Сбылось</button>
+  </nav>
+  <div id="status" class="status">Готовимся к загрузке…</div>
+</section>
+<main id="cards" class="grid"></main>
+<div class="pager"><button id="prev">← Назад</button><button id="next">Вперёд →</button></div>
+<div class="footer">Сделано с 💚 для нас</div>
+</div>
+<script>
+(function(){
+  const q=new URLSearchParams(location.search);
+  const session=q.get('session');
+  const apiBase=(q.get('api')||'').replace(/\/$/,'');
+  const botLink=q.get('bot')||'';
+  const state={kind:'mine',page:0,limit:12};
+  const cards=document.getElementById('cards');
+  const status=document.getElementById('status');
+  const prev=document.getElementById('prev');
+  const next=document.getElementById('next');
+  const add=document.getElementById('add');
+  const theme=document.getElementById('theme');
+  const tabs=[...document.querySelectorAll('.tab')];
+
+  function storageGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+  function storageSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function setTheme(v){const mode=v==='dark'?'dark':'light';document.documentElement.setAttribute('data-theme',mode);theme.textContent=mode==='dark'?'🌙 Тёмная':'☀️ Светлая';storageSet('wishlist_theme',mode)}
+  setTheme(storageGet('wishlist_theme')||((window.Telegram&&Telegram.WebApp&&Telegram.WebApp.colorScheme==='dark')?'dark':'light'));
+  theme.addEventListener('click',function(){setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')});
+
+  function openAdd(){if(botLink&&window.Telegram&&Telegram.WebApp&&Telegram.WebApp.openTelegramLink){Telegram.WebApp.openTelegramLink(botLink);return}if(botLink){location.href=botLink;return}alert('Откройте бота и отправьте ссылку или текст для добавления желания.')}
+  add.addEventListener('click',openAdd);
+
+  function emptyState(){const wrap=document.createElement('section');wrap.className='empty';wrap.innerHTML='<img src="/assets/empty_box.png?v=6" alt=""><strong>Пока ничего не найдено</strong><p>Здесь появятся ваши желания.</p><button class="empty-add">＋ Добавить желание</button>';wrap.querySelector('button').addEventListener('click',openAdd);return wrap}
+  function renderCard(c){const article=document.createElement('article');article.className='card';const media=document.createElement('div');media.className='media';if(c.image&&!String(c.image).startsWith('tg:')){const img=document.createElement('img');img.src=c.image;img.alt=c.title||'Изображение';media.appendChild(img)}else{const ph=document.createElement('div');ph.className='placeholder';ph.textContent='Нет фото';media.appendChild(ph)}const badge=document.createElement('span');badge.className='badge';badge.textContent=c.scope==='shared'?'Для нас':(c.isOwner?'Моё':'Партнёра');media.appendChild(badge);if(c.price){const p=document.createElement('span');p.className='price';p.textContent=c.price;media.appendChild(p)}const body=document.createElement('div');body.className='card-body';const h=document.createElement('h2');h.textContent=c.title||'Без названия';const owner=document.createElement('div');owner.className='muted';owner.textContent=c.ownerName?'Автор: '+c.ownerName:'';const meta=document.createElement('div');meta.className='meta';[c.priority===2?'❤️ Очень хочу':c.priority===1?'💛 Хочу':'🌱 Когда-нибудь',c.category||''].filter(Boolean).forEach(function(t){const s=document.createElement('span');s.className='chip';s.textContent=t;meta.appendChild(s)});const note=document.createElement('div');note.className='note';note.textContent=c.note||'Комментарий не добавлен';body.append(h,owner,meta,note);const actions=document.createElement('div');actions.className='card-actions';if(c.url){const a=document.createElement('a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Открыть магазин';actions.appendChild(a)}article.append(media,body,actions);return article}
+
+  async function load(){
+    if(!session){status.textContent='Сначала откройте приложение через кнопку в боте.';cards.innerHTML='';cards.appendChild(emptyState());return}
+    status.textContent='Загружаю список…';prev.disabled=true;next.disabled=true;tabs.forEach(function(b){b.disabled=true});
+    const base=apiBase||(location.origin+'/api');
+    const params=new URLSearchParams({session:session,kind:state.kind,page:String(state.page),limit:String(state.limit)});
+    try{
+      const r=await fetch(base+'/wishlist?'+params.toString());
+      const d=await r.json();
+      cards.innerHTML='';
+      if(!r.ok||!d.ok){throw new Error(d.error||'Ошибка загрузки')}
+      status.textContent='Страница '+(d.page+1)+' · Найдено '+d.count;
+      prev.disabled=d.page===0;next.disabled=!d.hasMore;
+      if(!d.cards.length){cards.appendChild(emptyState())}else{d.cards.forEach(function(c){cards.appendChild(renderCard(c))})}
+    }catch(e){cards.innerHTML='';cards.appendChild(emptyState());status.textContent=e.message||'Нет доступа к API';prev.disabled=state.page===0;next.disabled=true}
+    finally{tabs.forEach(function(b){b.disabled=false})}
+  }
+
+  tabs.forEach(function(b){b.addEventListener('click',function(){tabs.forEach(function(x){x.classList.remove('active')});b.classList.add('active');state.kind=b.dataset.kind;state.page=0;load()})});
+  prev.addEventListener('click',function(){if(state.page>0){state.page--;load()}});
+  next.addEventListener('click',function(){state.page++;load()});
+  try{if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand()}}catch(e){}
+  load();
+})();
+</script>
+</body>
+</html>
