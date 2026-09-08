@@ -8,12 +8,18 @@ import socket
 import re
 import ssl
 import os
+import time
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 LIMIT = 2_000_000
 BRIGHTDATA_OZON_DATASET = 'gd_lutq85sl13rlndbzai'
+BRIGHTDATA_COLLECTORS = {
+    'market.yandex.ru': 'c_mtsxfbf82lhz6y1jjo',
+    'mvideo.ru': 'c_mtsxpv772ly5ie73jp',
+    'letu.ru': 'c_mtsxqxszvrxd192io',
+}
 
 
 def clean_url(url):
@@ -322,6 +328,30 @@ def marketplace_fallback(url):
     return result
 
 
+def _brightdata_result(item, source):
+    if not isinstance(item, dict):
+        return None
+    title = str(item.get('name') or item.get('title') or '').strip()[:200]
+    image = item.get('image') or item.get('image_url') or ''
+    if not image and isinstance(item.get('images_url'), list) and item['images_url']:
+        image = item['images_url'][0]
+    price = item.get('final_price')
+    if price in ('', None):
+        price = item.get('price')
+    currency = str(item.get('currency') or 'RUB').strip()
+    if not title:
+        return None
+    if isinstance(image, str) and image:
+        image = urljoin(f'https://{source}/', image)
+    return {
+        'title': title,
+        'image': str(image or ''),
+        'price': f'{price} {currency}'.strip() if price not in ('', None) else '',
+        'source': source,
+        'partial': not bool(image and price not in ('', None)),
+    }
+
+
 def _brightdata_ozon(url):
     """Use the monthly free scraper allowance only for otherwise blocked Ozon pages."""
     token = os.environ.get('BRIGHTDATA_API_TOKEN', '').strip()
@@ -337,32 +367,62 @@ def _brightdata_ozon(url):
         with build_opener().open(request, timeout=25) as response:
             payload = json.loads(response.read(500_001).decode('utf-8'))
         item = payload[0] if isinstance(payload, list) and payload else payload
-        if not isinstance(item, dict):
-            return None
-        title = str(item.get('name') or item.get('title') or '').strip()[:200]
-        image = item.get('image') or item.get('image_url') or ''
-        if not image and isinstance(item.get('images_url'), list) and item['images_url']:
-            image = item['images_url'][0]
-        price = item.get('final_price')
-        if price in ('', None):
-            price = item.get('price')
-        currency = str(item.get('currency') or 'RUB').strip()
-        if not title:
-            return None
-        return {
-            'title': title,
-            'image': str(image or ''),
-            'price': f'{price} {currency}'.strip() if price not in ('', None) else '',
-            'source': 'ozon.ru',
-            'partial': not bool(image and price not in ('', None)),
-        }
+        return _brightdata_result(item, 'ozon.ru')
     except Exception:
         # Free allowance exhaustion or provider downtime must never block manual entry.
         return None
 
 
+def _brightdata_collector(url, collector):
+    """Trigger a custom collector and briefly poll it for one product result."""
+    token = os.environ.get('BRIGHTDATA_API_TOKEN', '').strip()
+    if not token or not collector:
+        return None
+    headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+    trigger = Request(
+        f'https://api.brightdata.com/dca/trigger?collector={collector}&queue_next=1',
+        data=json.dumps([{'url': url}]).encode(), headers=headers, method='POST')
+    try:
+        with build_opener().open(trigger, timeout=8) as response:
+            job = json.loads(response.read(50_001).decode('utf-8'))
+        job_id = job if isinstance(job, str) else job.get('id') or job.get('collection_id')
+        if not job_id or not re.fullmatch(r'[A-Za-z0-9_-]+', str(job_id)):
+            return None
+        deadline = time.monotonic() + 28
+        result_url = f'https://api.brightdata.com/dca/dataset?id={job_id}'
+        while time.monotonic() < deadline:
+            time.sleep(2)
+            try:
+                with build_opener().open(Request(result_url, headers=headers), timeout=6) as response:
+                    if response.status == 202:
+                        continue
+                    payload = json.loads(response.read(500_001).decode('utf-8'))
+            except Exception:
+                continue
+            item = payload[0] if isinstance(payload, list) and payload else payload
+            return _brightdata_result(item, urlsplit(url).hostname.lower())
+    except Exception:
+        pass
+    return None
+
+
+def _collector_for(url):
+    host = (urlsplit(url).hostname or '').lower()
+    for domain, collector in BRIGHTDATA_COLLECTORS.items():
+        if host == domain or host.endswith('.' + domain):
+            return collector
+    return ''
+
+
 def extract(url):
     fallback = marketplace_fallback(url)
+    collector = _collector_for(url)
+    # Yandex consistently returns a CAPTCHA to server requests, so avoid that
+    # redundant request and spend exactly one external record.
+    if collector and (urlsplit(url).hostname or '').lower().endswith('market.yandex.ru'):
+        enriched = _brightdata_collector(url, collector)
+        if enriched:
+            return enriched
     resolved = _known_short_target(url)
     if resolved:
         fallback = marketplace_fallback(resolved) or fallback
@@ -384,10 +444,16 @@ def extract(url):
             result['source'] = fallback.get('source') or result['source']
         if urlsplit(url).hostname.lower().endswith('ozon.ru') and result.get('partial'):
             result = _brightdata_ozon(url) or result
+        elif collector and result.get('partial'):
+            result = _brightdata_collector(url, collector) or result
         return result
     except (ValueError, OSError, http.client.HTTPException):
         if urlsplit(url).hostname.lower().endswith('ozon.ru'):
             enriched = _brightdata_ozon(url)
+            if enriched:
+                return enriched
+        elif collector:
+            enriched = _brightdata_collector(url, collector)
             if enriched:
                 return enriched
         if fallback:

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wishlist.bot import Bot, card
-from wishlist.metadata import clean_url, parse, public_address, fetch, extract, marketplace_fallback, _brightdata_ozon
+from wishlist.metadata import clean_url, parse, public_address, fetch, extract, marketplace_fallback, _brightdata_ozon, _brightdata_collector, _brightdata_result
 from wishlist.store import Store
 
 
@@ -149,6 +149,33 @@ class WishlistTests(unittest.TestCase):
             result = extract('https://ozon.ru/t/n6N6ixZ')
         self.assertEqual(result['title'], 'Товар Ozon')
         self.assertTrue(result['partial'])
+
+    def test_custom_collector_triggers_and_maps_product(self):
+        trigger = unittest.mock.MagicMock()
+        trigger.read.return_value = json.dumps({'id': 'j_test'}).encode()
+        trigger.__enter__.return_value = trigger
+        pending = unittest.mock.MagicMock(status=202)
+        pending.__enter__.return_value = pending
+        complete = unittest.mock.MagicMock(status=200)
+        complete.read.return_value = json.dumps([{
+            'name': 'Швабра', 'image': 'https://img.example/mop.jpg',
+            'final_price': 1388, 'currency': 'RUB'}]).encode()
+        complete.__enter__.return_value = complete
+        with patch.dict('os.environ', {'BRIGHTDATA_API_TOKEN': 'secret'}), \
+             patch('wishlist.metadata.time.sleep'), \
+             patch('wishlist.metadata.build_opener') as opener:
+            opener.return_value.open.side_effect = [trigger, pending, complete]
+            result = _brightdata_collector('https://market.yandex.ru/cc/test', 'c_test')
+        self.assertEqual(result['title'], 'Швабра')
+        self.assertEqual(result['price'], '1388 RUB')
+        self.assertFalse(result['partial'])
+
+    def test_collector_normalizes_protocol_relative_image(self):
+        result = _brightdata_result(
+            {'name': 'Щётка', 'image': '//img.mvideo.ru/item.jpg',
+             'final_price': 2299, 'currency': 'RUB'},
+            'mvideo.ru')
+        self.assertEqual(result['image'], 'https://img.mvideo.ru/item.jpg')
 
     def test_yandex_captcha_retains_product_title(self):
         target = 'https://market.yandex.ru/card/shvabra-s-otzhimom-i-vedrom/103760449703'
