@@ -62,7 +62,7 @@ class handler(BaseHTTPRequestHandler):
                 return self._send({'ok': False, 'error': 'Заполните карточку вручную.'}, 422)
 
             host = (urlsplit(url).hostname or '').lower()
-            async_domains = ('letu.ru', 'goldapple.ru')
+            async_domains = ()
             domain = next((d for d in async_domains if host == d or host.endswith('.' + d)), '')
             if domain:
                 job_id = brightdata_trigger(url, BRIGHTDATA_COLLECTORS.get(domain, ''))
