@@ -4,12 +4,14 @@
     { "src": "wishlist/miniapp/index.html", "use": "@vercel/static" },
     { "src": "wishlist/miniapp/assets/**", "use": "@vercel/static" },
     { "src": "api/index.py", "use": "@vercel/python" },
+    { "src": "api/metadata.py", "use": "@vercel/python" },
     { "src": "api/wish.py", "use": "@vercel/python" },
     { "src": "api/telegram.py", "use": "@vercel/python" }
   ],
   "routes": [
     { "src": "/telegram/webhook", "dest": "/api/telegram.py" },
     { "src": "/api/wish", "dest": "/api/wish.py" },
+    { "src": "/api/metadata", "dest": "/api/metadata.py" },
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/assets/(.*)", "dest": "/wishlist/miniapp/assets/$1" },
     { "src": "/(.*)", "dest": "/wishlist/miniapp/index.html" }
