@@ -5,6 +5,7 @@ from urllib.parse import urlparse, parse_qs
 
 from wishlist.catalog import CATEGORIES, KINDS, money
 from wishlist.storage import open_store
+from wishlist.web_auth import authorized_uid
 
 
 def serial(row, owner_name, is_owner, viewer_id=None):
@@ -76,7 +77,7 @@ class handler(BaseHTTPRequestHandler):
 
     def _session_uid(self, store, values):
         token = (self.headers.get('X-Wishlist-Session', '') or values.get('session', [''])[0]).strip()
-        return store.webapp_session_uid(token) if token else None
+        return authorized_uid(store, token, self.headers.get('X-Telegram-Init-Data', ''))
 
     def do_GET(self):
         parsed = urlparse(self.path)

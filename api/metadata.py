@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler
 
 from wishlist.metadata import clean_url, extract
 from wishlist.storage import open_store
+from wishlist.web_auth import authorized_uid
 
 
 class handler(BaseHTTPRequestHandler):
@@ -32,13 +33,10 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send({'ok': False, 'error': 'Bad JSON'}, 400)
 
-        session = str(payload.get('session') or '').strip()
         url = str(payload.get('url') or '').strip()
-        if not session:
-            return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
         try:
             store = open_store()
-            if not store.webapp_session_uid(session):
+            if not authorized_uid(store, payload.get('session'), payload.get('initData')):
                 return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
             url = clean_url(url)
             data = extract(url)

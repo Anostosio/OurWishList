@@ -2,11 +2,14 @@
 import http.client
 import ipaddress
 import json
+import base64
+import binascii
 import socket
 import re
 import ssl
 from html.parser import HTMLParser
-from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, unquote, urljoin, urlsplit, urlunsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 LIMIT = 2_000_000
 
@@ -44,7 +47,7 @@ def fetch(url):
             path = parts.path or '/'
             if parts.query:
                 path += '?' + parts.query
-            conn.request('GET', path, headers={'User-Agent': 'OurWishList/0.1', 'Accept': 'text/html', 'Accept-Encoding': 'identity'})
+            conn.request('GET', path, headers={'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36', 'Accept': 'text/html', 'Accept-Encoding': 'identity'})
             response = conn.getresponse()
             if response.status in (301, 302, 303, 307, 308):
                 location = response.getheader('Location')
@@ -173,11 +176,41 @@ def _slug_title(value):
     return value[:1].upper() + value[1:200] if value else ''
 
 
+class _SafeRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parts = urlsplit(clean_url(newurl))
+        public_address(parts.hostname)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _known_short_target(url):
+    parts = urlsplit(url)
+    if not (parts.hostname or '').endswith('market.yandex.ru') or not parts.path.startswith('/cc/'):
+        return ''
+    try:
+        request = Request(url, method='HEAD', headers={'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36'})
+        with build_opener(_SafeRedirect()).open(request, timeout=6) as response:
+            return response.geturl()
+    except Exception:
+        return ''
+
+
 def marketplace_fallback(url):
     """Return safe best-effort fields when a marketplace blocks page scraping."""
     parts = urlsplit(clean_url(url))
     host, path = parts.hostname.lower(), parts.path
     result = {'title': '', 'image': '', 'price': '', 'source': host, 'partial': True}
+    if host.endswith('market.yandex.ru') and path == '/showcaptcha':
+        encoded = parse_qs(parts.query).get('retpath', [''])[0]
+        if encoded:
+            try:
+                raw = encoded.rsplit('_', 1)[0]
+                target = base64.urlsafe_b64decode(raw + '=' * (-len(raw) % 4)).decode('utf-8')
+                nested = marketplace_fallback(target)
+                if nested:
+                    return nested
+            except (ValueError, UnicodeDecodeError, binascii.Error):
+                pass
     if host.endswith('wildberries.ru'):
         match = re.search(r'/catalog/(\d+)', path)
         if not match:
@@ -216,10 +249,14 @@ def marketplace_fallback(url):
 
 def extract(url):
     fallback = marketplace_fallback(url)
+    resolved = _known_short_target(url)
+    if resolved:
+        fallback = marketplace_fallback(resolved) or fallback
     try:
         html, final = fetch(url)
         result = parse(html, final)
         result['source'] = urlsplit(final).hostname or ''
+        fallback = marketplace_fallback(final) or fallback
         redirected = urlsplit(final).path != urlsplit(url).path
         if fallback:
             if redirected or not result.get('title') or (not result.get('image') and not result.get('price')):
@@ -229,7 +266,7 @@ def extract(url):
             result['partial'] = not bool(result.get('price'))
             result['source'] = fallback.get('source') or result['source']
         return result
-    except ValueError:
+    except (ValueError, OSError, http.client.HTTPException):
         if fallback:
             return fallback
         raise

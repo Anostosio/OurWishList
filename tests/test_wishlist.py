@@ -1,6 +1,7 @@
 import json
 import unittest
 import tempfile
+import base64
 from pathlib import Path
 from unittest.mock import patch
 
@@ -104,6 +105,12 @@ class WishlistTests(unittest.TestCase):
                 result = extract(url)
                 self.assertEqual(result['title'], title)
                 self.assertTrue(result['partial'])
+
+    def test_yandex_captcha_retains_product_title(self):
+        target = 'https://market.yandex.ru/card/shvabra-s-otzhimom-i-vedrom/103760449703'
+        encoded = base64.urlsafe_b64encode(target.encode()).decode().rstrip('=')
+        result = marketplace_fallback(f'https://market.yandex.ru/showcaptcha?retpath={encoded}_deadbeef')
+        self.assertEqual(result['title'], 'Shvabra s otzhimom i vedrom')
 
     def test_initial_price_records_check_date_and_source(self):
         wid, _ = self.s.add(1, 'Gift', price='99 UAH', source='shop.example')

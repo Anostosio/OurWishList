@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 from wishlist.storage import open_store
+from wishlist.web_auth import authorized_uid
 
 
 class handler(BaseHTTPRequestHandler):
@@ -24,8 +25,8 @@ class handler(BaseHTTPRequestHandler):
             raise RuntimeError('DATABASE_URL is not configured')
         return open_store()
 
-    def _uid(self, store, session):
-        return store.webapp_session_uid(str(session or '').strip())
+    def _uid(self, store, session, init_data=''):
+        return authorized_uid(store, session, init_data)
 
     def do_GET(self):
         if urlparse(self.path).path != '/api/pair':
@@ -33,7 +34,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             values = parse_qs(urlparse(self.path).query)
             store = self._store()
-            uid = self._uid(store, self.headers.get('X-Wishlist-Session', '') or values.get('session', [''])[0])
+            uid = self._uid(store, self.headers.get('X-Wishlist-Session', '') or values.get('session', [''])[0], self.headers.get('X-Telegram-Init-Data', ''))
             if not uid:
                 return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
             partner = store.partner(uid)
@@ -54,7 +55,7 @@ class handler(BaseHTTPRequestHandler):
                 return self._send({'ok': False, 'error': 'Слишком большой запрос'}, 413)
             payload = json.loads(self.rfile.read(length) or b'{}')
             store = self._store()
-            uid = self._uid(store, payload.get('session'))
+            uid = self._uid(store, payload.get('session'), payload.get('initData'))
             if not uid:
                 return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
             if payload.get('action') != 'invite':

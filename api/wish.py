@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 from wishlist.catalog import CATEGORIES, MATCH_MODES
 from wishlist.metadata import clean_url
 from wishlist.storage import open_store
+from wishlist.web_auth import authorized_uid
 
 
 def create_values(payload):
@@ -56,11 +57,8 @@ class handler(BaseHTTPRequestHandler):
     def _authorized(self, payload):
         if not os.environ.get('DATABASE_URL', '').strip():
             return None, None, (503, 'Cloud database is not configured')
-        session = str(payload.get('session') or '').strip()
-        if not session:
-            return None, None, (401, 'Сессия истекла. Откройте приложение заново через бота.')
         store = open_store()
-        uid = store.webapp_session_uid(session)
+        uid = authorized_uid(store, payload.get('session'), payload.get('initData'))
         if not uid:
             return None, None, (401, 'Сессия истекла. Откройте приложение заново через бота.')
         return store, uid, None
