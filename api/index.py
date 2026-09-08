@@ -88,27 +88,27 @@ class handler(BaseHTTPRequestHandler):
 
         uid = self._session_uid(store, values)
         if not uid:
-            return self._send({'ok': False, 'error': 'Session expired'}, 401)
+            return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
 
         if parsed.path == '/api/wishlist':
             kind = values.get('kind', ['mine'])[0]
             if kind not in KINDS:
-                return self._send({'ok': False, 'error': 'Unknown kind'}, 400)
+                return self._send({'ok': False, 'error': 'Неизвестный раздел'}, 400)
             query = (values.get('query', [''])[0] or '').strip()
             category = (values.get('category', [''])[0] or '').strip()
             if category and category not in CATEGORIES:
-                return self._send({'ok': False, 'error': 'Unknown category'}, 400)
+                return self._send({'ok': False, 'error': 'Неизвестная категория'}, 400)
             budget = (values.get('budget', [''])[0] or '').strip()
             sort = values.get('sort', ['priority'])[0]
             try:
                 page = max(0, int(values.get('page', ['0'])[0] or 0))
                 limit = min(30, max(6, int(values.get('limit', ['12'])[0] or 12)))
             except ValueError:
-                return self._send({'ok': False, 'error': 'Bad pagination values'}, 400)
+                return self._send({'ok': False, 'error': 'Не удалось открыть эту страницу'}, 400)
 
             rows = filtered_rows(store, uid, kind, query, category, budget, sort)
             if rows is None:
-                return self._send({'ok': False, 'error': 'Budget parse error. Use one currency, e.g. 2000 UAH.'}, 400)
+                return self._send({'ok': False, 'error': 'Укажите сумму и валюту, например 2000 UAH.'}, 400)
             start = page * limit
             stop = start + limit
             cards = []
@@ -128,11 +128,11 @@ class handler(BaseHTTPRequestHandler):
         if parsed.path.startswith('/api/wish/'):
             wid = parsed.path.removeprefix('/api/wish/')
             if not wid.isdigit():
-                return self._send({'ok': False, 'error': 'Bad wish id'}, 400)
+                return self._send({'ok': False, 'error': 'Некорректное желание'}, 400)
             try:
                 row = store.wish(uid, int(wid))
             except ValueError:
-                return self._send({'ok': False, 'error': 'Wish not found'}, 404)
+                return self._send({'ok': False, 'error': 'Желание не найдено'}, 404)
             owner = store.user(row['owner'])
             return self._send({
                 'ok': True,

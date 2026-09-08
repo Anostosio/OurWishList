@@ -32,7 +32,7 @@ class handler(BaseHTTPRequestHandler):
             store = self._store()
             uid = self._uid(store, values.get('session', [''])[0])
             if not uid:
-                return self._send({'ok': False, 'error': 'Session expired'}, 401)
+                return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
             partner = store.partner(uid)
             return self._send({
                 'ok': True,
@@ -53,9 +53,9 @@ class handler(BaseHTTPRequestHandler):
             store = self._store()
             uid = self._uid(store, payload.get('session'))
             if not uid:
-                return self._send({'ok': False, 'error': 'Session expired'}, 401)
+                return self._send({'ok': False, 'error': 'Сессия истекла. Откройте приложение заново через бота.'}, 401)
             if payload.get('action') != 'invite':
-                return self._send({'ok': False, 'error': 'Unknown action'}, 400)
+                return self._send({'ok': False, 'error': 'Неизвестное действие'}, 400)
             username = os.environ.get('TELEGRAM_BOT_USERNAME', '').strip().lstrip('@')
             if not username:
                 return self._send({'ok': False, 'error': 'Бот не настроен'}, 503)

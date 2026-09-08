@@ -1,9 +1,37 @@
 import json
 import os
 from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlsplit
 
 from wishlist.catalog import CATEGORIES, MATCH_MODES
+from wishlist.metadata import clean_url
 from wishlist.storage import open_store
+
+
+def create_values(payload):
+    title = str(payload.get('title') or '').strip()
+    if not title:
+        raise ValueError('Введите название желания')
+    url = str(payload.get('url') or '').strip()
+    if url:
+        url = clean_url(url)
+    scope = str(payload.get('scope') or 'mine')
+    category = str(payload.get('category') or 'other')
+    match_mode = str(payload.get('matchMode') or 'unspecified')
+    priority = int(payload.get('priority', 1))
+    if scope not in ('mine', 'shared') or category not in CATEGORIES or match_mode not in MATCH_MODES or priority not in (0, 1, 2):
+        raise ValueError('Проверьте заполненные поля')
+    return {
+        'title': title, 'url': url,
+        'image': str(payload.get('image') or '').strip(),
+        'source': (urlsplit(url).hostname or '') if url else '',
+        'price': str(payload.get('price') or '').strip(),
+        'note': str(payload.get('note') or '').strip(),
+        'scope': scope, 'priority': priority, 'category': category,
+        'match_mode': match_mode,
+        'size': str(payload.get('size') or '')[:100],
+        'color': str(payload.get('color') or '')[:100],
+    }
 
 
 class handler(BaseHTTPRequestHandler):
@@ -27,11 +55,11 @@ class handler(BaseHTTPRequestHandler):
             return None, None, (503, 'Cloud database is not configured')
         session = str(payload.get('session') or '').strip()
         if not session:
-            return None, None, (401, 'Session expired')
+            return None, None, (401, 'Сессия истекла. Откройте приложение заново через бота.')
         store = open_store()
         uid = store.webapp_session_uid(session)
         if not uid:
-            return None, None, (401, 'Session expired')
+            return None, None, (401, 'Сессия истекла. Откройте приложение заново через бота.')
         return store, uid, None
 
     def do_POST(self):
@@ -42,34 +70,18 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send({'ok': False, 'error': 'Bad JSON'}, 400)
 
-        title = str(payload.get('title') or '').strip()
-        url = str(payload.get('url') or '').strip()
-        image = str(payload.get('image') or '').strip()
-        source = str(payload.get('source') or '').strip()
-        price = str(payload.get('price') or '').strip()
-        note = str(payload.get('note') or '').strip()
-        if not title:
-            return self._send({'ok': False, 'error': 'Введите название желания'}, 400)
-
         try:
             store, uid, error = self._authorized(payload)
             if error:
                 return self._send({'ok': False, 'error': error[1]}, error[0])
-            wish_id, created = store.add(uid, title, url=url, image=image, price=price, note=note, source=source)
+            values = create_values(payload)
+            wish_id, created = store.add(uid, values['title'], url=values['url'], image=values['image'], price=values['price'], note=values['note'], source=values['source'])
             if created:
-                updates = {
-                    'scope': str(payload.get('scope') or 'mine'),
-                    'priority': int(payload.get('priority', 1)),
-                    'category': str(payload.get('category') or 'other'),
-                    'match_mode': str(payload.get('matchMode') or 'unspecified'),
-                    'size': str(payload.get('size') or '')[:100],
-                    'color': str(payload.get('color') or '')[:100],
-                }
-                for field, value in updates.items():
-                    store.change(uid, wish_id, field, value)
+                for field in ('scope', 'priority', 'category', 'match_mode', 'size', 'color'):
+                    store.change(uid, wish_id, field, values[field])
             return self._send({'ok': True, 'id': wish_id, 'created': bool(created)})
-        except (ValueError, TypeError):
-            return self._send({'ok': False, 'error': 'Проверьте заполненные поля'}, 400)
+        except (ValueError, TypeError) as error:
+            return self._send({'ok': False, 'error': str(error) or 'Проверьте заполненные поля'}, 400)
         except Exception:
             return self._send({'ok': False, 'error': 'Не удалось сохранить желание'}, 500)
 
@@ -105,7 +117,7 @@ class handler(BaseHTTPRequestHandler):
                 for field, value in values.items():
                     store.change(uid, wish_id, field, value)
             else:
-                return self._send({'ok': False, 'error': 'Unknown action'}, 400)
+                return self._send({'ok': False, 'error': 'Неизвестное действие'}, 400)
             return self._send({'ok': True})
         except (ValueError, TypeError):
             return self._send({'ok': False, 'error': 'Действие недоступно'}, 400)
