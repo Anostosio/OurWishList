@@ -18,7 +18,10 @@ BRIGHTDATA_OZON_DATASET = 'gd_lutq85sl13rlndbzai'
 BRIGHTDATA_COLLECTORS = {
     'market.yandex.ru': 'c_mtsxfbf82lhz6y1jjo',
     'mvideo.ru': 'c_mtsxpv772ly5ie73jp',
+    'letu.ru': 'c_mtsxqxszvrxd192io',
+    'goldapple.ru': 'c_mtsy5eoe2azezgxvdg',
 }
+COLLECTOR_FIRST = ('market.yandex.ru', 'letu.ru', 'goldapple.ru')
 
 
 def clean_url(url):
@@ -387,7 +390,9 @@ def _brightdata_collector(url, collector):
         job_id = job if isinstance(job, str) else job.get('id') or job.get('collection_id')
         if not job_id or not re.fullmatch(r'[A-Za-z0-9_-]+', str(job_id)):
             return None
-        deadline = time.monotonic() + 28
+        # Custom collectors commonly need 20-45 seconds on protected storefronts.
+        # One trigger is polled by job id, so waiting longer does not spend records.
+        deadline = time.monotonic() + 50
         result_url = f'https://api.brightdata.com/dca/dataset?id={job_id}'
         while time.monotonic() < deadline:
             time.sleep(2)
@@ -416,9 +421,11 @@ def _collector_for(url):
 def extract(url):
     fallback = marketplace_fallback(url)
     collector = _collector_for(url)
-    # Yandex consistently returns a CAPTCHA to server requests, so avoid that
-    # redundant request and spend exactly one external record.
-    if collector and (urlsplit(url).hostname or '').lower().endswith('market.yandex.ru'):
+    # These storefronts consistently block or stall server requests. Going to the
+    # configured collector immediately saves latency without spending extra records.
+    host = (urlsplit(url).hostname or '').lower()
+    if collector and any(host == domain or host.endswith('.' + domain)
+                         for domain in COLLECTOR_FIRST):
         enriched = _brightdata_collector(url, collector)
         if enriched:
             return enriched
