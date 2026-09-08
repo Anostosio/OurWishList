@@ -7,7 +7,7 @@ from wishlist.catalog import CATEGORIES, KINDS, money
 from wishlist.storage import open_store
 
 
-def serial(row, owner_name, is_owner):
+def serial(row, owner_name, is_owner, viewer_id=None):
     short = row['note']
     if short and len(short) > 180:
         short = short[:177] + '...'
@@ -28,6 +28,7 @@ def serial(row, owner_name, is_owner):
         'ownerName': owner_name,
         'isOwner': is_owner,
         'archived': bool(row['archived']),
+        'claimedByMe': bool(not is_owner and viewer_id and row['claimed_by'] == viewer_id),
         'scopeLabel': 'Для нас' if row['scope'] == 'shared' else ('Личное' if is_owner else 'Партнёру')
     }
 
@@ -111,7 +112,7 @@ class handler(BaseHTTPRequestHandler):
             cards = []
             for row in rows[start:stop]:
                 owner = store.user(row['owner'])
-                cards.append(serial(row, owner['name'] if owner else '—', row['owner'] == uid))
+                cards.append(serial(row, owner['name'] if owner else '—', row['owner'] == uid, uid))
             return self._send({
                 'ok': True,
                 'kind': kind,
@@ -134,7 +135,7 @@ class handler(BaseHTTPRequestHandler):
             return self._send({
                 'ok': True,
                 'card': {
-                    **serial(row, owner['name'] if owner else '—', row['owner'] == uid),
+                    **serial(row, owner['name'] if owner else '—', row['owner'] == uid, uid),
                     'note': row['note'],
                     'priceChecked': row['price_checked'] or '',
                     'matchModeLabel': {
