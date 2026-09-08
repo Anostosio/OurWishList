@@ -410,7 +410,7 @@ class Bot:
                                  '/app — открыть красивую карточную витрину.\n'
                                  '/cancel — отменить редактирование. /export — выгрузить свои желания.')
         if text == '/export':
-            rows = self.store.db.execute('SELECT id,title,url,price,note,scope,priority,archived,created,category,match_mode,size,color,price_checked FROM wishes WHERE owner=?', (uid,)).fetchall()
+            rows = self.store.export(uid)
             if not rows:
                 return self.say(uid, 'Пока нечего выгружать.')
             for row in rows:

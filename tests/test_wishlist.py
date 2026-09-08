@@ -146,6 +146,31 @@ class WishlistTests(unittest.TestCase):
             self.assertNotIn('claimed_by', output)
             self.assertNotIn('Вы планируете', output)
 
+    def test_bot_app_button_uses_fresh_session_and_production_url(self):
+        bot = Bot('unused', self.s)
+        bot.username = 'OurWishListbot_bot'
+        with patch.dict('os.environ', {'WEBAPP_URL': 'https://ourwishlist-silk.vercel.app'}, clear=False), \
+             patch.object(bot, 'api', return_value={}) as api:
+            bot.webapp_url = 'https://ourwishlist-silk.vercel.app'
+            bot.open_web_app(1)
+        payload = api.call_args.kwargs
+        url = payload['reply_markup']['inline_keyboard'][0][0]['web_app']['url']
+        self.assertTrue(url.startswith('https://ourwishlist-silk.vercel.app?session='))
+        token = url.split('session=', 1)[1].split('&', 1)[0]
+        self.assertEqual(self.s.webapp_session_uid(token), 1)
+
+    def test_partner_can_join_through_start_link_once(self):
+        owner_store = Store(':memory:')
+        owner_store.user(10, 'Owner')
+        owner_store.user(20, 'Partner')
+        token = owner_store.invite(10)
+        bot = Bot('unused', owner_store)
+        with patch.object(bot, 'api', return_value={}) as api:
+            bot.message({'chat': {'id': 20, 'type': 'private'}, 'from': {'id': 20, 'first_name': 'Partner'}, 'text': f'/start join_{token}'})
+        self.assertEqual(owner_store.partner(10)['id'], 20)
+        self.assertIn('Вы теперь пара', api.call_args.kwargs['text'])
+        owner_store.db.close()
+
 
 if __name__ == '__main__':
     unittest.main()
