@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wishlist.bot import Bot, card
-from wishlist.metadata import clean_url, parse, public_address, fetch, extract, marketplace_fallback
+from wishlist.metadata import clean_url, parse, public_address, fetch, extract, marketplace_fallback, _brightdata_ozon
 from wishlist.store import Store
 
 
@@ -123,6 +123,32 @@ class WishlistTests(unittest.TestCase):
                 result = extract(url)
                 self.assertEqual(result['title'], title)
                 self.assertTrue(result['partial'])
+
+    def test_brightdata_ozon_maps_complete_product(self):
+        response = unittest.mock.MagicMock()
+        response.read.return_value = json.dumps([{
+            'name': 'Платье BIDRESS', 'image': 'https://img.example/dress.jpg',
+            'final_price': 4867, 'currency': 'RUB'
+        }]).encode()
+        response.__enter__.return_value = response
+        with patch.dict('os.environ', {'BRIGHTDATA_API_TOKEN': 'secret'}), \
+             patch('wishlist.metadata.build_opener') as opener:
+            opener.return_value.open.return_value = response
+            result = _brightdata_ozon('https://ozon.ru/t/n6N6ixZ')
+        self.assertEqual(result['title'], 'Платье BIDRESS')
+        self.assertEqual(result['image'], 'https://img.example/dress.jpg')
+        self.assertEqual(result['price'], '4867 RUB')
+        self.assertFalse(result['partial'])
+        request = opener.return_value.open.call_args.args[0]
+        self.assertNotIn('secret', request.full_url)
+
+    def test_ozon_provider_failure_keeps_editable_fallback(self):
+        with patch.dict('os.environ', {'BRIGHTDATA_API_TOKEN': 'secret'}), \
+             patch('wishlist.metadata.fetch', side_effect=ValueError('blocked')), \
+             patch('wishlist.metadata.build_opener', side_effect=OSError('offline')):
+            result = extract('https://ozon.ru/t/n6N6ixZ')
+        self.assertEqual(result['title'], 'Товар Ozon')
+        self.assertTrue(result['partial'])
 
     def test_yandex_captcha_retains_product_title(self):
         target = 'https://market.yandex.ru/card/shvabra-s-otzhimom-i-vedrom/103760449703'

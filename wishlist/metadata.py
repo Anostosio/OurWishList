@@ -7,11 +7,13 @@ import binascii
 import socket
 import re
 import ssl
+import os
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, unquote, urljoin, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 LIMIT = 2_000_000
+BRIGHTDATA_OZON_DATASET = 'gd_lutq85sl13rlndbzai'
 
 
 def clean_url(url):
@@ -320,6 +322,45 @@ def marketplace_fallback(url):
     return result
 
 
+def _brightdata_ozon(url):
+    """Use the monthly free scraper allowance only for otherwise blocked Ozon pages."""
+    token = os.environ.get('BRIGHTDATA_API_TOKEN', '').strip()
+    if not token:
+        return None
+    request = Request(
+        ('https://api.brightdata.com/datasets/v3/scrape?dataset_id='
+         f'{BRIGHTDATA_OZON_DATASET}&notify=false&include_errors=true'),
+        data=json.dumps({'input': [{'url': url, 'country': ''}], 'limit_per_input': 1}).encode(),
+        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+        method='POST')
+    try:
+        with build_opener().open(request, timeout=25) as response:
+            payload = json.loads(response.read(500_001).decode('utf-8'))
+        item = payload[0] if isinstance(payload, list) and payload else payload
+        if not isinstance(item, dict):
+            return None
+        title = str(item.get('name') or item.get('title') or '').strip()[:200]
+        image = item.get('image') or item.get('image_url') or ''
+        if not image and isinstance(item.get('images_url'), list) and item['images_url']:
+            image = item['images_url'][0]
+        price = item.get('final_price')
+        if price in ('', None):
+            price = item.get('price')
+        currency = str(item.get('currency') or 'RUB').strip()
+        if not title:
+            return None
+        return {
+            'title': title,
+            'image': str(image or ''),
+            'price': f'{price} {currency}'.strip() if price not in ('', None) else '',
+            'source': 'ozon.ru',
+            'partial': not bool(image and price not in ('', None)),
+        }
+    except Exception:
+        # Free allowance exhaustion or provider downtime must never block manual entry.
+        return None
+
+
 def extract(url):
     fallback = marketplace_fallback(url)
     resolved = _known_short_target(url)
@@ -341,8 +382,14 @@ def extract(url):
                 result['image'] = fallback.get('image', '')
             result['partial'] = not bool(result.get('price'))
             result['source'] = fallback.get('source') or result['source']
+        if urlsplit(url).hostname.lower().endswith('ozon.ru') and result.get('partial'):
+            result = _brightdata_ozon(url) or result
         return result
     except (ValueError, OSError, http.client.HTTPException):
+        if urlsplit(url).hostname.lower().endswith('ozon.ru'):
+            enriched = _brightdata_ozon(url)
+            if enriched:
+                return enriched
         if fallback:
             return fallback
         raise
