@@ -6,3 +6,8 @@ __pycache__/
 
 .vercel
 .env*
+!.env.example
+.coverage
+.pytest_cache/
+htmlcov/
+backups/
